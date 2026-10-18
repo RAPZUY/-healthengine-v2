@@ -218,7 +218,6 @@ function BodySVG({ title, muscles, primaryMuscles, secondaryMuscles, view }) {
           </marker>
         </defs>
 
-        {/* Siluet dasar tubuh */}
         <ellipse cx="100" cy="34" rx="17" ry="21" fill="#0f172a" stroke="#334155" strokeWidth="1.2" />
         <path d="M 93 54 L 93 64 L 107 64 L 107 54 Z" fill="#0f172a" stroke="#334155" strokeWidth="1" />
         <path
@@ -252,12 +251,10 @@ function BodySVG({ title, muscles, primaryMuscles, secondaryMuscles, view }) {
           strokeWidth="1.2"
         />
 
-        {/* Lapisan Otot Vektor */}
         {Object.entries(muscles).map(([muscleId, def]) => (
           <g key={muscleId}>{renderMusclePaths(def, muscleId, primaryMuscles, secondaryMuscles)}</g>
         ))}
 
-        {/* Label Otot Utama */}
         {primaryMuscles.map((muscleId) => {
           const pos = getLabelPosition(muscleId, view);
           if (!pos || !muscles[muscleId]) return null;
@@ -287,7 +284,6 @@ function BodySVG({ title, muscles, primaryMuscles, secondaryMuscles, view }) {
           );
         })}
 
-        {/* Label Otot Sekunder */}
         {secondaryMuscles.map((muscleId) => {
           const pos = getLabelPosition(muscleId, view);
           if (!pos || !muscles[muscleId]) return null;
@@ -320,100 +316,330 @@ function BodySVG({ title, muscles, primaryMuscles, secondaryMuscles, view }) {
   );
 }
 
-// Analisis pola biomekanika berdasarkan jenis gerakan
-function getBiomechanicsData(exercise) {
-  const p = exercise.primaryMuscles || [];
-  const nameLower = (exercise.name || '').toLowerCase();
+// Data spesifik biomekanika berdasarkan 6 kategori pose vektor
+function getPoseCategoryData(category, exercise) {
+  switch (category) {
+    case 'vertical_push':
+      return {
+        category,
+        label: 'Vertical Push (Inversi / Bahu)',
+        phase1Title: 'Fase 1: Persiapan (Tarik Napas)',
+        phase1Breath: 'Tarik Napas (Turunkan Kepala Terkontrol)',
+        phase1Desc: 'Tubuh membentuk V terbalik tajam. Turunkan kepala perlahan ke arah lantai di depan kedua telapak tangan.',
+        phase2Title: 'Fase 2: Puncak Kontraksi (Hembuskan Napas)',
+        phase2Breath: 'Hembuskan Napas (Dorong Tegak Kuat)',
+        phase2Desc: 'Dorong lantai melalui pangkal telapak tangan, luruskan lengan penuh hingga bahu mengunci posisi puncak.',
+        mistakes: [
+          'Siku membuka melebar ke samping, bukan menyerong 45 derajat ke belakang.',
+          'Punggung bawah melengkung akibat kehilangan tegangan otot perut (core).',
+          'Kepala menatap ke depan sehingga leher tertekan, seharusnya pandangan ke arah kaki.',
+        ],
+      };
 
-  // Pattern categorization
-  if (p.includes('quads') || p.includes('glutes') || p.includes('hamstrings') || p.includes('calves')) {
-    return {
-      type: 'legs',
-      phase1Title: 'Fase 1: Turun Terkontrol (Eksentrik)',
-      phase1Breath: 'Tarik Napas (Turun Terkontrol)',
-      phase1Desc: 'Buka pinggul ke belakang, tekuk lutut perlahan searah jari kaki hingga sudut 90°.',
-      phase2Title: 'Fase 2: Dorong Tegak (Konsentrik)',
-      phase2Breath: 'Buang Napas (Dorong/Tarik Kuat)',
-      phase2Desc: 'Dorong lantai melalui tumit, kencangkan paha depan & bokong hingga posisi berdiri tegak.',
-      mistakes: [
-        'Lutut menekuk ke arah dalam (knee valgus) membebani ligamen.',
-        'Tumit terangkat dari lantai saat turun, memindahkan beban ke sendi lutut.',
-        'Punggung bawah melengkung membungkuk karena core tidak dikunci.',
-      ],
-    };
+    case 'squat_lunge':
+      return {
+        category,
+        label: 'Squat & Lunge (Paha & Panggul)',
+        phase1Title: 'Fase 1: Persiapan (Tarik Napas)',
+        phase1Breath: 'Tarik Napas (Turun hingga Paha 90°)',
+        phase1Desc: 'Buka pinggul ke belakang, tekuk lutut perlahan searah jari kaki hingga garis paha sejajar horizontal.',
+        phase2Title: 'Fase 2: Puncak Kontraksi (Hembuskan Napas)',
+        phase2Breath: 'Hembuskan Napas (Dorong Tumit Berdiri Tegak)',
+        phase2Desc: 'Tancapkan tumit ke lantai, dorong panggul maju, kencangkan paha depan dan bokong di posisi tegak lurus.',
+        mistakes: [
+          'Lutut roboh ke arah dalam (knee valgus) membebani ligamen krusiatum.',
+          'Tumit terangkat dari lantai memindahkan beban berbahaya ke tempurung lutut.',
+          'Dada membungkuk ke depan karena otot punggung atas tidak dikunci aktif.',
+        ],
+      };
+
+    case 'pull_motion':
+      return {
+        category,
+        label: 'Pull Motion (Tarikan Punggung & Lengan)',
+        phase1Title: 'Fase 1: Persiapan (Tarik Napas)',
+        phase1Breath: 'Tarik Napas (Regangan Punggung Penuh)',
+        phase1Desc: 'Rentangkan lengan lurus penuh ke atas atau ke depan, biarkan otot sayap (lats) teregang maksimal.',
+        phase2Title: 'Fase 2: Puncak Kontraksi (Hembuskan Napas)',
+        phase2Breath: 'Hembuskan Napas (Rapatkan Belikat & Tarik)',
+        phase2Desc: 'Tarik siku ke bawah dan belakang, busungkan dada ke arah palang/beban, peras tulang belikat rapat.',
+        mistakes: [
+          'Mengayunkan badan (kipping / momentum) menghilangkan rangsang hipertrofi otot punggung.',
+          'Bahu terangkat mendekati telinga karena tidak melakukan depresi skapula terlebih dahulu.',
+          'Hanya mengandalkan tarikan lengan bawah tanpa mengaktifkan otot sayap punggung.',
+        ],
+      };
+
+    case 'core_floor':
+      return {
+        category,
+        label: 'Core Floor (Kunci Dinding Abdominal)',
+        phase1Title: 'Fase 1: Persiapan (Tarik Napas)',
+        phase1Breath: 'Tarik Napas (Kunci Perut & Panggul)',
+        phase1Desc: 'Posisikan tubuh telungkup bertumpu pada lengan bawah dan jari kaki. Kunci panggul dalam posisi netral.',
+        phase2Title: 'Fase 2: Puncak Kontraksi (Hembuskan Napas)',
+        phase2Breath: 'Hembuskan Napas (Tahan Kontraksi Rapat)',
+        phase2Desc: 'Tarik pusar ke arah tulang belakang, rapatkan bokong, tahan garis tubuh lurus paralel tanpa goyang.',
+        mistakes: [
+          'Pinggul merosot ke bawah membebani diskus tulang belakang lumbal.',
+          'Bokong terangkat terlalu tinggi menyerupai segitiga mengurangi beban pada otot perut.',
+          'Menahan napas terlalu lama yang memicu lonjakan tekanan darah rongga dada.',
+        ],
+      };
+
+    case 'cardio_blast':
+      return {
+        category,
+        label: 'Cardio Blast (Dinamis & Daya Ledak)',
+        phase1Title: 'Fase 1: Persiapan (Tarik Napas)',
+        phase1Breath: 'Tarik Napas (Jongkok Siap Lepas Landas)',
+        phase1Desc: 'Tekuk lutut dan pinggul dalam posisi jongkok elastis, kumpulkan energi regang pada paha dan betis.',
+        phase2Title: 'Fase 2: Puncak Kontraksi (Hembuskan Napas)',
+        phase2Breath: 'Hembuskan Napas (Lompat Eksplosif di Udara)',
+        phase2Desc: 'Ledakkan seluruh tungkai ke atas, dorong ujung kaki lepas dari lantai, rentangkan tubuh penuh di udara.',
+        mistakes: [
+          'Mendarat dengan lutut terkunci lurus yang mengirim getaran benturan langsung ke sendi.',
+          'Mendarat dengan tumit keras alih-alih meredam melalui bantalan telapak kaki depan.',
+          'Irama napas tidak sinkron dengan lompatan sehingga cepat kehabisan oksigen.',
+        ],
+      };
+
+    case 'horizontal_push':
+    default:
+      return {
+        category: 'horizontal_push',
+        label: 'Horizontal Push (Dada & Trisep Mandiri)',
+        phase1Title: 'Fase 1: Persiapan (Tarik Napas)',
+        phase1Breath: 'Tarik Napas (Turunkan Dada Perlahan)',
+        phase1Desc: 'Garis tubuh lurus mendatar paralel lantai. Buka siku 45 derajat dan turunkan dada hingga 2 cm dari lantai.',
+        phase2Title: 'Fase 2: Puncak Kontraksi (Hembuskan Napas)',
+        phase2Breath: 'Hembuskan Napas (Kencangkan Dada & Dorong)',
+        phase2Desc: 'Dorong lantai kuat dengan telapak tangan, luruskan lengan penuh, peras otot dada di puncak gerakan.',
+        mistakes: [
+          'Siku membuka 90 derajat sejajar bahu yang menjepit sendi rotator cuff.',
+          'Pinggul melorot ke bawah karena core perut tidak dikunci rapat.',
+          'Kepala mendongak atau menunduk ekstrem mengganggu kelurusan leher.',
+        ],
+      };
   }
-
-  if (p.includes('lats') || p.includes('upper_back') || p.includes('biceps')) {
-    return {
-      type: 'pull',
-      phase1Title: 'Fase 1: Rentangan Penuh (Eksentrik)',
-      phase1Breath: 'Tarik Napas (Turun Terkontrol)',
-      phase1Desc: 'Luruskan lengan perlahan, rasakan regangan penuh pada otot punggung sayap dan bisep.',
-      phase2Title: 'Fase 2: Tarikan Puncak (Konsentrik)',
-      phase2Breath: 'Buang Napas (Dorong/Tarik Kuat)',
-      phase2Desc: 'Tarik siku ke bawah dan belakang, rapatkan belikat, dorong dada membusung ke depan.',
-      mistakes: [
-        'Mengayunkan badan (kipping/momentum) menghilangkan beban dari otot punggung.',
-        'Bahu terangkat mendekati telinga (shrugging) akibat kurang depresi skapula.',
-        'Hanya menarik dengan lengan tanpa mengaktifkan otot sayap (lats).',
-      ],
-    };
-  }
-
-  if (p.includes('abs') || p.includes('obliques')) {
-    return {
-      type: 'core',
-      phase1Title: 'Fase 1: Ekstensi / Persiapan (Eksentrik)',
-      phase1Breath: 'Tarik Napas (Turun Terkontrol)',
-      phase1Desc: 'Buka rongga perut terkendali tanpa melepaskan ketegangan otot panggul dan pinggang.',
-      phase2Title: 'Fase 2: Kontraksi Puncak (Konsentrik)',
-      phase2Breath: 'Buang Napas (Dorong/Tarik Kuat)',
-      phase2Desc: 'Tarik tulang rusuk mendekati panggul, peras otot perut kuat selama 1 detik penuh.',
-      mistakes: [
-        'Menarik leher atau kepala dengan tangan hingga menimbulkan cedera servikal.',
-        'Menahan napas terlalu lama sehingga tekanan rongga perut naik berlebihan.',
-        'Menggunakan momentum ayunan kaki alih-alih kekuatan kontraksi core.',
-      ],
-    };
-  }
-
-  if (p.includes('side_delts') || p.includes('rear_delts') || (p.includes('front_delts') && !p.includes('chest'))) {
-    return {
-      type: 'shoulders',
-      phase1Title: 'Fase 1: Turun Terkendali (Eksentrik)',
-      phase1Breath: 'Tarik Napas (Turun Terkontrol)',
-      phase1Desc: 'Turunkan beban/lengan perlahan di bidang scapular plane tanpa menjatuhkan siku.',
-      phase2Title: 'Fase 2: Angkat / Tekan (Konsentrik)',
-      phase2Breath: 'Buang Napas (Dorong/Tarik Kuat)',
-      phase2Desc: 'Dorong atau angkat siku sejajar bahu, tahan posisi puncak tanpa melengkungkan pinggang.',
-      mistakes: [
-        'Melengkungkan tulang belakang ke belakang (arching) saat mendorong beban ke atas.',
-        'Mengayunkan panggul untuk mengangkat beban di luar kapasitas otot bahu.',
-        'Pergelangan tangan tertekuk ke belakang melemahkan transfer tenaga.',
-      ],
-    };
-  }
-
-  // Default: Push / Chest
-  return {
-    type: 'push',
-    phase1Title: 'Fase 1: Turun ke Dada (Eksentrik)',
-    phase1Breath: 'Tarik Napas (Turun Terkontrol)',
-    phase1Desc: 'Buka dada, tekuk siku 45-60 derajat dari torso, turunkan badan hingga dada hampir menyentuh bidang.',
-    phase2Title: 'Fase 2: Dorongan Kuat (Konsentrik)',
-    phase2Breath: 'Buang Napas (Dorong/Tarik Kuat)',
-    phase2Desc: 'Kencangkan dada dan trisep, dorong kuat hingga lengan lurus tanpa mengunci sendi siku keras.',
-    mistakes: [
-      'Siku membuka 90 derajat sejajar bahu yang menjepit sendi rotator cuff.',
-      'Pinggul melorot ke bawah karena core perut tidak dikunci rapat.',
-      'Kepala mendongak atau menunduk ekstrem mengganggu kelurusan tulang leher.',
-    ],
-  };
 }
 
-// Komponen Visualizer Vektor Biomekanika 2-Fase
-function BiomechanicalVectorViewer({ biomech }) {
-  const { type, phase1Breath, phase2Breath, phase1Desc, phase2Desc, mistakes } = biomech;
+// Komponen Render Vektor SVG Presisi untuk 6 Kategori Pose
+function PoseVectorGraphic({ category, phase }) {
+  const isPhase1 = phase === 1;
+
+  return (
+    <svg viewBox="0 0 160 90" className="w-full max-w-[180px] h-20 select-none">
+      <defs>
+        <marker id="arrow-down-vect" markerWidth="6" markerHeight="6" refX="4" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="#38bdf8" />
+        </marker>
+        <marker id="arrow-up-vect" markerWidth="6" markerHeight="6" refX="4" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="#34d399" />
+        </marker>
+      </defs>
+
+      {/* Garis Dasar Lantai */}
+      <line x1="15" y1="80" x2="145" y2="80" stroke="#334155" strokeWidth="2" strokeDasharray="4 4" />
+
+      {/* ================= 1. VERTICAL PUSH (PIKE / INVERSI) ================= */}
+      {category === 'vertical_push' && (
+        <g>
+          {isPhase1 ? (
+            // Fase 1: V terbalik tajam, tangan di lantai, persiapan turun
+            <g>
+              {/* Kaki dari lantai ke pinggul tinggi */}
+              <line x1="38" y1="78" x2="78" y2="28" stroke="#94a3b8" strokeWidth="3.5" strokeLinecap="round" />
+              {/* Torso dari pinggul tinggi ke bahu rendah */}
+              <line x1="78" y1="28" x2="114" y2="52" stroke="#94a3b8" strokeWidth="3.5" strokeLinecap="round" />
+              {/* Lengan lurus menyentuh lantai */}
+              <line x1="114" y1="52" x2="124" y2="78" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
+              {/* Kepala mengarah ke bawah di antara kedua tangan */}
+              <circle cx="118" cy="62" r="7" fill="#38bdf8" />
+              {/* Panah arah gerak turun kepala */}
+              <line x1="134" y1="45" x2="134" y2="68" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down-vect)" strokeDasharray="3 2" />
+              <text x="138" y="58" fill="#38bdf8" fontSize="7" fontWeight="bold">Turun</text>
+            </g>
+          ) : (
+            // Fase 2: Kepala turun dekat lantai, siku menekuk tajam, dorongan kuat
+            <g>
+              {/* Kaki menahan pinggul tinggi */}
+              <line x1="38" y1="78" x2="78" y2="30" stroke="#94a3b8" strokeWidth="3.5" strokeLinecap="round" />
+              {/* Torso condong tajam ke bawah */}
+              <line x1="78" y1="30" x2="116" y2="62" stroke="#94a3b8" strokeWidth="3.5" strokeLinecap="round" />
+              {/* Siku menekuk tajam */}
+              <polyline points="116,62 106,52 122,78" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
+              {/* Kepala mendekati lantai */}
+              <circle cx="120" cy="72" r="7" fill="#10b981" />
+              {/* Titik kencang bahu depan & trisep */}
+              <circle cx="106" cy="52" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping" />
+              <circle cx="106" cy="52" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
+              {/* Panah dorong tegak */}
+              <line x1="88" y1="64" x2="88" y2="42" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up-vect)" />
+              <text x="76" y="52" fill="#34d399" fontSize="7" fontWeight="bold">Dorong!</text>
+            </g>
+          )}
+        </g>
+      )}
+
+      {/* ================= 2. HORIZONTAL PUSH (PUSH-UP / PRESS) ================= */}
+      {category === 'horizontal_push' && (
+        <g>
+          {isPhase1 ? (
+            // Fase 1: Garis tubuh lurus mendatar paralel lantai, turun terkontrol
+            <g>
+              <line x1="32" y1="62" x2="124" y2="62" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+              <circle cx="132" cy="62" r="7" fill="#38bdf8" />
+              <line x1="26" y1="78" x2="32" y2="62" stroke="#64748b" strokeWidth="3" />
+              <polyline points="112,62 104,50 114,78" fill="none" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
+              <line x1="78" y1="26" x2="78" y2="50" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down-vect)" strokeDasharray="3 2" />
+              <text x="86" y="38" fill="#38bdf8" fontSize="7.5" fontWeight="bold">Paralel</text>
+            </g>
+          ) : (
+            // Fase 2: Puncak dorongan, dada kencang, lengan lurus
+            <g>
+              <line x1="32" y1="50" x2="122" y2="38" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+              <circle cx="130" cy="36" r="7" fill="#10b981" />
+              <line x1="26" y1="78" x2="32" y2="50" stroke="#64748b" strokeWidth="3" />
+              <line x1="108" y1="40" x2="108" y2="78" stroke="#34d399" strokeWidth="3.5" strokeLinecap="round" />
+              <circle cx="108" cy="40" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping" />
+              <circle cx="108" cy="40" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
+              <line x1="108" y1="72" x2="108" y2="50" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up-vect)" />
+              <text x="116" y="60" fill="#34d399" fontSize="7.5" fontWeight="bold">Kencang!</text>
+            </g>
+          )}
+        </g>
+      )}
+
+      {/* ================= 3. SQUAT & LUNGE ================= */}
+      {category === 'squat_lunge' && (
+        <g>
+          {isPhase1 ? (
+            // Fase 1: Torso tegak, pinggul hinge turun
+            <g>
+              <circle cx="70" cy="22" r="7" fill="#38bdf8" />
+              <line x1="70" y1="29" x2="68" y2="52" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+              <line x1="68" y1="52" x2="86" y2="56" stroke="#e2e8f0" strokeWidth="3.5" strokeLinecap="round" />
+              <line x1="86" y1="56" x2="84" y2="78" stroke="#64748b" strokeWidth="3" strokeLinecap="round" />
+              <line x1="106" y1="26" x2="106" y2="52" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down-vect)" strokeDasharray="3 2" />
+              <text x="114" y="42" fill="#38bdf8" fontSize="7" fontWeight="bold">90° Sudut</text>
+            </g>
+          ) : (
+            // Fase 2: Dorong tumit, torso tegak lurus sempurna
+            <g>
+              <circle cx="80" cy="18" r="7" fill="#10b981" />
+              <line x1="80" y1="25" x2="80" y2="52" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+              <line x1="80" y1="52" x2="76" y2="78" stroke="#34d399" strokeWidth="3.5" strokeLinecap="round" />
+              <line x1="80" y1="52" x2="84" y2="78" stroke="#34d399" strokeWidth="3.5" strokeLinecap="round" />
+              <circle cx="80" cy="52" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping" />
+              <circle cx="80" cy="52" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
+              <line x1="105" y1="68" x2="105" y2="40" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up-vect)" />
+              <text x="112" y="55" fill="#34d399" fontSize="7.5" fontWeight="bold">Kunci Paha!</text>
+            </g>
+          )}
+        </g>
+      )}
+
+      {/* ================= 4. PULL MOTION ================= */}
+      {category === 'pull_motion' && (
+        <g>
+          {/* Palang Horizontal Atas */}
+          <line x1="25" y1="16" x2="135" y2="16" stroke="#64748b" strokeWidth="3.5" />
+          {isPhase1 ? (
+            // Fase 1: Lengan terentang penuh menggantung
+            <g>
+              <line x1="68" y1="16" x2="76" y2="36" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
+              <line x1="92" y1="16" x2="84" y2="36" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
+              <circle cx="80" cy="28" r="7" fill="#38bdf8" />
+              <line x1="80" y1="36" x2="80" y2="68" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+              <line x1="80" y1="68" x2="76" y2="86" stroke="#64748b" strokeWidth="2.5" />
+              <line x1="80" y1="68" x2="84" y2="86" stroke="#64748b" strokeWidth="2.5" />
+              <line x1="110" y1="32" x2="110" y2="56" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down-vect)" strokeDasharray="3 2" />
+              <text x="116" y="46" fill="#38bdf8" fontSize="7" fontWeight="bold">Regang</text>
+            </g>
+          ) : (
+            // Fase 2: Dada ditarik ke palang, siku ke bawah, belikat rapat
+            <g>
+              <polyline points="65,16 68,32 78,26" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
+              <polyline points="95,16 92,32 82,26" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
+              <circle cx="80" cy="14" r="7" fill="#10b981" />
+              <line x1="80" y1="20" x2="80" y2="52" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+              <circle cx="80" cy="32" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping" />
+              <circle cx="80" cy="32" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
+              <line x1="50" y1="52" x2="50" y2="28" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up-vect)" />
+              <text x="24" y="42" fill="#34d399" fontSize="7" fontWeight="bold">Peras Sayap</text>
+            </g>
+          )}
+        </g>
+      )}
+
+      {/* ================= 5. CORE FLOOR (PLANK / HOLLOW) ================= */}
+      {category === 'core_floor' && (
+        <g>
+          {isPhase1 ? (
+            // Fase 1: Garis lurus bertumpu siku & ujung kaki, persiapan napas
+            <g>
+              <line x1="30" y1="66" x2="124" y2="56" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+              <circle cx="130" cy="54" r="7" fill="#38bdf8" />
+              <line x1="28" y1="78" x2="30" y2="66" stroke="#64748b" strokeWidth="3" />
+              <line x1="114" y1="58" x2="114" y2="78" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
+              <line x1="78" y1="32" x2="78" y2="48" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down-vect)" strokeDasharray="3 2" />
+              <text x="86" y="42" fill="#38bdf8" fontSize="7" fontWeight="bold">Kunci Core</text>
+            </g>
+          ) : (
+            // Fase 2: Kontraksi perut rapat, garis lurus kaku
+            <g>
+              <line x1="30" y1="64" x2="124" y2="54" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+              <circle cx="130" cy="52" r="7" fill="#10b981" />
+              <line x1="28" y1="78" x2="30" y2="64" stroke="#64748b" strokeWidth="3" />
+              <line x1="114" y1="56" x2="114" y2="78" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
+              <circle cx="77" cy="59" r="8" fill="#f43f5e" opacity="0.3" className="animate-ping" />
+              <circle cx="77" cy="59" r="4.5" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
+              <text x="56" y="42" fill="#34d399" fontSize="7.5" fontWeight="bold">Perut Rapat!</text>
+            </g>
+          )}
+        </g>
+      )}
+
+      {/* ================= 6. CARDIO BLAST (BURPEE / SKIPPING) ================= */}
+      {category === 'cardio_blast' && (
+        <g>
+          {isPhase1 ? (
+            // Fase 1: Posisi jongkok elastis dekat lantai
+            <g>
+              <circle cx="68" cy="46" r="7" fill="#38bdf8" />
+              <line x1="68" y1="53" x2="64" y2="66" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+              <polyline points="64,66 82,60 80,78" fill="none" stroke="#e2e8f0" strokeWidth="3" strokeLinecap="round" />
+              <line x1="72" y1="58" x2="88" y2="78" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="108" y1="46" x2="108" y2="70" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down-vect)" strokeDasharray="3 2" />
+              <text x="114" y="60" fill="#38bdf8" fontSize="7" fontWeight="bold">Jongkok</text>
+            </g>
+          ) : (
+            // Fase 2: Siluet transisi eksplosif melompat di udara bebas
+            <g>
+              <circle cx="80" cy="18" r="7" fill="#10b981" />
+              <line x1="80" y1="25" x2="80" y2="50" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+              <line x1="80" y1="32" x2="65" y2="10" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
+              <line x1="80" y1="32" x2="95" y2="10" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
+              <line x1="80" y1="50" x2="74" y2="70" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
+              <line x1="80" y1="50" x2="86" y2="70" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
+              <line x1="76" y1="74" x2="76" y2="77" stroke="#38bdf8" strokeWidth="1.5" />
+              <line x1="84" y1="74" x2="84" y2="77" stroke="#38bdf8" strokeWidth="1.5" />
+              <circle cx="80" cy="40" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping" />
+              <circle cx="80" cy="40" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
+              <line x1="115" y1="62" x2="115" y2="30" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up-vect)" />
+              <text x="122" y="46" fill="#34d399" fontSize="7" fontWeight="bold">Terbang!</text>
+            </g>
+          )}
+        </g>
+      )}
+    </svg>
+  );
+}
+
+// Panel Biomekanika Kontekstual Berbasis Pose Vektor
+function BiomechanicalVectorViewer({ poseData }) {
+  const { category, label, phase1Breath, phase2Breath, phase1Desc, phase2Desc, mistakes } = poseData;
 
   return (
     <div className="rounded-xl bg-slate-950 border border-slate-800 p-4 space-y-4">
@@ -421,92 +647,25 @@ function BiomechanicalVectorViewer({ biomech }) {
         <h4 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
           <span>📐</span> Panduan Biomekanika Gerakan
         </h4>
-        <span className="text-xs font-mono font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-          2-Fase Vektor
+        <span className="text-xs font-mono font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 truncate max-w-[150px]">
+          {label}
         </span>
       </div>
 
-      {/* Grid 2-Fase Diagram */}
+      {/* Grid 2 Panel: Fase 1 (Persiapan) vs Fase 2 (Puncak Kontraksi) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {/* Fase 1: Eksentrik */}
+        {/* Panel Fase 1: Persiapan (Tarik Napas) */}
         <div className="rounded-xl bg-slate-900 border border-slate-800 p-3 space-y-2 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-bold text-blue-400">Fase 1: Eksentrik</span>
-              <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 font-mono">Persiapan</span>
+              <span className="text-xs font-bold text-blue-400">Fase 1: Persiapan</span>
+              <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 font-mono">Eksentrik</span>
             </div>
             <p className="text-xs text-slate-400 leading-snug">{phase1Desc}</p>
           </div>
 
-          {/* SVG Diagram Fase 1 */}
           <div className="py-2 flex items-center justify-center bg-slate-950/70 rounded-lg border border-slate-800/60">
-            <svg viewBox="0 0 160 90" className="w-full max-w-[180px] h-20">
-              <defs>
-                <marker id="arrow-down" markerWidth="6" markerHeight="6" refX="4" refY="3" orient="auto">
-                  <path d="M0,0 L6,3 L0,6 Z" fill="#38bdf8" />
-                </marker>
-              </defs>
-
-              {type === 'push' && (
-                <g>
-                  {/* Garis Lantai */}
-                  <line x1="20" y1="80" x2="140" y2="80" stroke="#334155" strokeWidth="2" strokeDasharray="4 4" />
-                  {/* Tubuh Turun Rendah (Eksentrik) */}
-                  <line x1="45" y1="62" x2="120" y2="70" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
-                  <circle cx="126" cy="68" r="8" fill="#38bdf8" /> {/* Kepala */}
-                  <polyline points="50,63 70,52 82,78" fill="none" stroke="#e2e8f0" strokeWidth="3" strokeLinecap="round" /> {/* Tangan tekuk 90 */}
-                  <line x1="38" y1="78" x2="45" y2="62" stroke="#64748b" strokeWidth="3" /> {/* Kaki */}
-                  {/* Panah Vektor Turun Terkontrol */}
-                  <line x1="85" y1="28" x2="85" y2="52" stroke="#38bdf8" strokeWidth="2.5" markerEnd="url(#arrow-down)" strokeDasharray="3 2" />
-                  <text x="94" y="42" fill="#38bdf8" fontSize="8" fontWeight="bold">Turun 2 dtk</text>
-                </g>
-              )}
-
-              {type === 'pull' && (
-                <g>
-                  {/* Palang / Bar */}
-                  <line x1="30" y1="18" x2="130" y2="18" stroke="#64748b" strokeWidth="3" />
-                  {/* Tubuh Menggantung Terentang Penuh */}
-                  <line x1="80" y1="36" x2="80" y2="68" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
-                  <circle cx="80" cy="28" r="7" fill="#38bdf8" />
-                  <line x1="65" y1="18" x2="74" y2="38" stroke="#e2e8f0" strokeWidth="3" strokeLinecap="round" />
-                  <line x1="95" y1="18" x2="86" y2="38" stroke="#e2e8f0" strokeWidth="3" strokeLinecap="round" />
-                  <line x1="80" y1="68" x2="75" y2="86" stroke="#64748b" strokeWidth="2.5" />
-                  <line x1="80" y1="68" x2="85" y2="86" stroke="#64748b" strokeWidth="2.5" />
-                  {/* Panah Regangan */}
-                  <line x1="108" y1="35" x2="108" y2="58" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down)" strokeDasharray="2 2" />
-                  <text x="115" y="50" fill="#38bdf8" fontSize="7.5" fontWeight="bold">Rentang</text>
-                </g>
-              )}
-
-              {type === 'legs' && (
-                <g>
-                  {/* Garis Lantai */}
-                  <line x1="20" y1="84" x2="140" y2="84" stroke="#334155" strokeWidth="2" strokeDasharray="4 4" />
-                  {/* Torso & Hip Hinge turun */}
-                  <circle cx="70" cy="24" r="7" fill="#38bdf8" />
-                  <line x1="70" y1="31" x2="64" y2="54" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
-                  {/* Femur sudut squat */}
-                  <line x1="64" y1="54" x2="84" y2="58" stroke="#e2e8f0" strokeWidth="3.5" strokeLinecap="round" />
-                  <line x1="84" y1="58" x2="82" y2="82" stroke="#64748b" strokeWidth="3" strokeLinecap="round" />
-                  {/* Panah Vektor Hinge Turun */}
-                  <line x1="105" y1="28" x2="105" y2="54" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down)" strokeDasharray="3 2" />
-                  <text x="112" y="44" fill="#38bdf8" fontSize="7.5" fontWeight="bold">90° Paralel</text>
-                </g>
-              )}
-
-              {(type === 'shoulders' || type === 'core') && (
-                <g>
-                  <circle cx="80" cy="26" r="8" fill="#38bdf8" />
-                  <line x1="80" y1="34" x2="80" y2="68" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
-                  <polyline points="55,50 80,44 105,50" fill="none" stroke="#e2e8f0" strokeWidth="3" strokeLinecap="round" />
-                  <line x1="80" y1="68" x2="65" y2="84" stroke="#64748b" strokeWidth="3" />
-                  <line x1="80" y1="68" x2="95" y2="84" stroke="#64748b" strokeWidth="3" />
-                  <line x1="120" y1="34" x2="120" y2="56" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down)" strokeDasharray="3 2" />
-                  <text x="126" y="48" fill="#38bdf8" fontSize="7.5" fontWeight="bold">Terkendali</text>
-                </g>
-              )}
-            </svg>
+            <PoseVectorGraphic category={category} phase={1} />
           </div>
 
           <div className="pt-1.5 border-t border-slate-800">
@@ -516,92 +675,18 @@ function BiomechanicalVectorViewer({ biomech }) {
           </div>
         </div>
 
-        {/* Fase 2: Konsentrik */}
+        {/* Panel Fase 2: Puncak Kontraksi (Hembuskan Napas) */}
         <div className="rounded-xl bg-slate-900 border border-slate-800 p-3 space-y-2 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-bold text-emerald-400">Fase 2: Konsentrik</span>
-              <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 font-mono">Puncak</span>
+              <span className="text-xs font-bold text-emerald-400">Fase 2: Puncak Kontraksi</span>
+              <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 font-mono">Konsentrik</span>
             </div>
             <p className="text-xs text-slate-400 leading-snug">{phase2Desc}</p>
           </div>
 
-          {/* SVG Diagram Fase 2 */}
           <div className="py-2 flex items-center justify-center bg-slate-950/70 rounded-lg border border-slate-800/60">
-            <svg viewBox="0 0 160 90" className="w-full max-w-[180px] h-20">
-              <defs>
-                <marker id="arrow-up" markerWidth="6" markerHeight="6" refX="4" refY="3" orient="auto">
-                  <path d="M0,0 L6,3 L0,6 Z" fill="#34d399" />
-                </marker>
-              </defs>
-
-              {type === 'push' && (
-                <g>
-                  {/* Garis Lantai */}
-                  <line x1="20" y1="80" x2="140" y2="80" stroke="#334155" strokeWidth="2" strokeDasharray="4 4" />
-                  {/* Tubuh Terangkat Tegak Lurus Penuh */}
-                  <line x1="45" y1="52" x2="120" y2="40" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
-                  <circle cx="128" cy="38" r="8" fill="#10b981" />
-                  {/* Tangan lurus dorong kuat */}
-                  <line x1="102" y1="44" x2="102" y2="78" stroke="#34d399" strokeWidth="3.5" strokeLinecap="round" />
-                  <line x1="38" y1="78" x2="45" y2="52" stroke="#64748b" strokeWidth="3" />
-                  {/* Titik Kencang Otot Bekerja (Glowing Hotspot) */}
-                  <circle cx="102" cy="44" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping" />
-                  <circle cx="102" cy="44" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
-                  {/* Panah Dorongan Kuat */}
-                  <line x1="102" y1="74" x2="102" y2="52" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up)" />
-                  <text x="110" y="60" fill="#34d399" fontSize="8" fontWeight="bold">Dorong!</text>
-                </g>
-              )}
-
-              {type === 'pull' && (
-                <g>
-                  {/* Palang / Bar */}
-                  <line x1="30" y1="18" x2="130" y2="18" stroke="#64748b" strokeWidth="3" />
-                  {/* Dagu di atas palang / siku ditarik ke bawah */}
-                  <circle cx="80" cy="14" r="7" fill="#10b981" />
-                  <line x1="80" y1="20" x2="80" y2="52" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
-                  <polyline points="65,18 70,30 80,24" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
-                  <polyline points="95,18 90,30 80,24" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
-                  {/* Titik Kencang Punggung Lats */}
-                  <circle cx="80" cy="34" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping" />
-                  <circle cx="80" cy="34" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
-                  {/* Panah Angkat */}
-                  <line x1="50" y1="48" x2="50" y2="24" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up)" />
-                  <text x="24" y="38" fill="#34d399" fontSize="8" fontWeight="bold">Peras Otot</text>
-                </g>
-              )}
-
-              {type === 'legs' && (
-                <g>
-                  <line x1="20" y1="84" x2="140" y2="84" stroke="#334155" strokeWidth="2" strokeDasharray="4 4" />
-                  {/* Posisi Berdiri Tegak Mengunci Glutes & Quads */}
-                  <circle cx="80" cy="18" r="7" fill="#10b981" />
-                  <line x1="80" y1="25" x2="80" y2="54" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
-                  <line x1="80" y1="54" x2="76" y2="82" stroke="#34d399" strokeWidth="3.5" strokeLinecap="round" />
-                  <line x1="80" y1="54" x2="84" y2="82" stroke="#34d399" strokeWidth="3.5" strokeLinecap="round" />
-                  {/* Glowing Titik Quads & Glutes */}
-                  <circle cx="80" cy="54" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping" />
-                  <circle cx="80" cy="54" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
-                  <line x1="105" y1="70" x2="105" y2="40" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up)" />
-                  <text x="112" y="55" fill="#34d399" fontSize="8" fontWeight="bold">Kunci Otot!</text>
-                </g>
-              )}
-
-              {(type === 'shoulders' || type === 'core') && (
-                <g>
-                  <circle cx="80" cy="18" r="8" fill="#10b981" />
-                  <line x1="80" y1="26" x2="80" y2="60" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
-                  {/* Lengan Mendorong Ke Atas Penuh */}
-                  <line x1="80" y1="36" x2="60" y2="16" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
-                  <line x1="80" y1="36" x2="100" y2="16" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
-                  <circle cx="80" cy="36" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping" />
-                  <circle cx="80" cy="36" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
-                  <line x1="120" y1="50" x2="120" y2="24" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up)" />
-                  <text x="126" y="38" fill="#34d399" fontSize="8" fontWeight="bold">Puncak</text>
-                </g>
-              )}
-            </svg>
+            <PoseVectorGraphic category={category} phase={2} />
           </div>
 
           <div className="pt-1.5 border-t border-slate-800">
@@ -612,10 +697,10 @@ function BiomechanicalVectorViewer({ biomech }) {
         </div>
       </div>
 
-      {/* Kesalahan Umum Postur yang Wajib Dihindari */}
+      {/* Kesalahan Postur Kritis yang Wajib Dihindari */}
       <div className="p-3 rounded-lg bg-rose-950/20 border border-rose-500/20 space-y-1.5">
         <p className="text-xs font-bold text-rose-400 flex items-center gap-1.5">
-          <span>⚠️</span> Kesalahan Postur yang Wajib Dihindari:
+          <span>⚠️</span> Kesalahan Postur Kritis yang Wajib Dihindari:
         </p>
         <ul className="space-y-1 text-xs text-slate-300">
           {mistakes.map((m, idx) => (
@@ -652,9 +737,11 @@ export default function MuscleAnatomyModal({ exercise, onClose }) {
     primaryMuscles = [],
     secondaryMuscles = [],
     muscleExplanation,
+    vectorPoseCategory,
   } = exercise;
 
-  const biomech = getBiomechanicsData(exercise);
+  // Dapatkan data biomekanika kontekstual berbasis vectorPoseCategory
+  const poseData = getPoseCategoryData(vectorPoseCategory || 'horizontal_push', exercise);
 
   const anteriorPrimary = primaryMuscles.filter((m) => ANTERIOR_MUSCLES[m]);
   const anteriorSecondary = secondaryMuscles.filter((m) => ANTERIOR_MUSCLES[m]);
@@ -720,9 +807,9 @@ export default function MuscleAnatomyModal({ exercise, onClose }) {
           </div>
         </div>
 
-        {/* Panel Vektor Biomekanika 2-Fase */}
+        {/* Panel Vektor Biomekanika Kontekstual Berbasis Pose */}
         <div className="px-4 pb-3">
-          <BiomechanicalVectorViewer biomech={biomech} />
+          <BiomechanicalVectorViewer poseData={poseData} />
         </div>
 
         {/* SVG Muscle Anatomy Map */}

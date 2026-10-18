@@ -294,7 +294,7 @@ export default function HealthAppPage() {
             <div>
               <span className="font-bold text-sm text-white">HealthEngine</span>
               <span className="ml-1.5 px-1.5 py-0.5 rounded text-xs font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                V2.5
+                V2.6
               </span>
             </div>
           </div>
