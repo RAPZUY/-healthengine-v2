@@ -350,19 +350,34 @@ export function calculateWorkoutStreak(completedDates = [], restDayNumbers = [0,
 
 // 10. Mengalikan makronutrien makanan sesuai target kalori pengguna
 export function scaleMealToTarget(meal, dailyTargetCalories, baseDailyCalories) {
+  if (!meal) return meal;
   if (!baseDailyCalories || baseDailyCalories <= 0) {
-    return { ...meal, portionNote: 'Porsi standar (sesuai resep asli)' };
+    return { ...meal, portionNote: 'Porsi standar (sesuai resep asli)', scaledHouseholdPortion: meal.householdPortion || '' };
   }
 
   const ratio = dailyTargetCalories / baseDailyCalories;
 
   let portionNote = '';
   if (ratio > 1.05) {
-    portionNote = `Porsi ${ratio.toFixed(1)}x (+${Math.round((ratio - 1) * 100)}% takaran nasi & protein)`;
+    portionNote = `Porsi ${ratio.toFixed(1)}x (+${Math.round((ratio - 1) * 100)}% takaran URT & protein)`;
   } else if (ratio < 0.95) {
-    portionNote = `Porsi ${ratio.toFixed(2)}x (Kurangi sedikit porsi karbohidrat)`;
+    portionNote = `Porsi ${ratio.toFixed(2)}x (-${Math.round((1 - ratio) * 100)}% takaran karbohidrat URT)`;
   } else {
     portionNote = 'Porsi standar (sesuai resep asli)';
+  }
+
+  // Skalakan takaran URT (centong, potong, sdm, dll) secara proporsional
+  let scaledHouseholdPortion = meal.householdPortion || '';
+  if (meal.householdPortion && Math.abs(ratio - 1) >= 0.05) {
+    scaledHouseholdPortion = meal.householdPortion.replace(
+      /(\d+(?:\.\d+)?)\s*(centong|potong|sdm|sdt|butir|lembar|buah|mangkok|ekor|g\b|kaleng|biji|bungkus)/gi,
+      (match, p1, p2) => {
+        const orig = parseFloat(p1);
+        const scaled = orig * ratio;
+        const formatted = scaled >= 10 ? Math.round(scaled) : Number(scaled.toFixed(1));
+        return `${formatted} ${p2}`;
+      }
+    );
   }
 
   return {
@@ -372,5 +387,6 @@ export function scaleMealToTarget(meal, dailyTargetCalories, baseDailyCalories) 
     carbs: Math.round(meal.carbs * ratio),
     fat: Math.round(meal.fat * ratio),
     portionNote,
+    scaledHouseholdPortion,
   };
 }
