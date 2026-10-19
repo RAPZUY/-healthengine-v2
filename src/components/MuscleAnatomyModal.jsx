@@ -429,7 +429,7 @@ function PoseVectorGraphic({ category, phase }) {
   const isPhase1 = phase === 1;
 
   return (
-    <svg viewBox="0 0 160 90" className="w-full max-w-[180px] h-20 select-none">
+    <svg viewBox="0 0 160 90" className="w-full max-w-44 h-20 select-none">
       <defs>
         <marker id="arrow-down-vect" markerWidth="6" markerHeight="6" refX="4" refY="3" orient="auto">
           <path d="M0,0 L6,3 L0,6 Z" fill="#38bdf8" />
@@ -446,66 +446,68 @@ function PoseVectorGraphic({ category, phase }) {
       {category === 'vertical_push' && (
         <g>
           {isPhase1 ? (
-            // Fase 1: V terbalik tajam, tangan di lantai, persiapan turun
+            // Fase 1: Geometri V terbalik tajam, pinggul tinggi, kepala menggantung di antara kedua tangan
             <g>
-              {/* Kaki dari lantai ke pinggul tinggi */}
-              <line x1="38" y1="78" x2="78" y2="28" stroke="#94a3b8" strokeWidth="3.5" strokeLinecap="round" />
-              {/* Torso dari pinggul tinggi ke bahu rendah */}
-              <line x1="78" y1="28" x2="114" y2="52" stroke="#94a3b8" strokeWidth="3.5" strokeLinecap="round" />
-              {/* Lengan lurus menyentuh lantai */}
-              <line x1="114" y1="52" x2="124" y2="78" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
-              {/* Kepala mengarah ke bawah di antara kedua tangan */}
-              <circle cx="118" cy="62" r="7" fill="#38bdf8" />
-              {/* Panah arah gerak turun kepala */}
-              <line x1="134" y1="45" x2="134" y2="68" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down-vect)" strokeDasharray="3 2" />
-              <text x="138" y="58" fill="#38bdf8" fontSize="7" fontWeight="bold">Turun</text>
+              {/* Kaki dari lantai menanjak ke pinggul tinggi */}
+              <line x1="34" y1="80" x2="60" y2="28" stroke="#94a3b8" strokeWidth="3.5" strokeLinecap="round" />
+              {/* Torso menurun dari pinggul tinggi ke bahu */}
+              <line x1="60" y1="28" x2="112" y2="50" stroke="#94a3b8" strokeWidth="3.5" strokeLinecap="round" />
+              {/* Kedua lengan lurus menancap di lantai */}
+              <line x1="112" y1="50" x2="104" y2="80" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
+              <line x1="112" y1="50" x2="128" y2="80" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
+              {/* Kepala tepat di antara kedua tangan */}
+              <circle cx="116" cy="64" r="6.5" fill="#38bdf8" />
+              {/* Panah arah turun kepala */}
+              <line x1="138" y1="42" x2="138" y2="70" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down-vect)" strokeDasharray="3 2" />
+              <text x="142" y="58" fill="#38bdf8" fontSize="7" fontWeight="bold">Turun</text>
             </g>
           ) : (
-            // Fase 2: Kepala turun dekat lantai, siku menekuk tajam, dorongan kuat
+            // Fase 2: Kepala turun hampir menyentuh lantai di antara tangan, siku menekuk ke belakang
             <g>
-              {/* Kaki menahan pinggul tinggi */}
-              <line x1="38" y1="78" x2="78" y2="30" stroke="#94a3b8" strokeWidth="3.5" strokeLinecap="round" />
-              {/* Torso condong tajam ke bawah */}
-              <line x1="78" y1="30" x2="116" y2="62" stroke="#94a3b8" strokeWidth="3.5" strokeLinecap="round" />
-              {/* Siku menekuk tajam */}
-              <polyline points="116,62 106,52 122,78" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
-              {/* Kepala mendekati lantai */}
-              <circle cx="120" cy="72" r="7" fill="#10b981" />
+              <line x1="34" y1="80" x2="62" y2="30" stroke="#94a3b8" strokeWidth="3.5" strokeLinecap="round" />
+              <line x1="62" y1="30" x2="110" y2="54" stroke="#94a3b8" strokeWidth="3.5" strokeLinecap="round" />
+              {/* Siku menekuk tajam, telapak tetap menancap di lantai */}
+              <polyline points="110,54 94,64 106,80" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
+              <polyline points="110,54 122,64 130,80" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
+              <circle cx="118" cy="73" r="6.5" fill="#10b981" />
               {/* Titik kencang bahu depan & trisep */}
-              <circle cx="106" cy="52" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping" />
-              <circle cx="106" cy="52" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
+              <circle cx="94" cy="64" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping motion-reduce:animate-none" />
+              <circle cx="94" cy="64" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
               {/* Panah dorong tegak */}
-              <line x1="88" y1="64" x2="88" y2="42" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up-vect)" />
-              <text x="76" y="52" fill="#34d399" fontSize="7" fontWeight="bold">Dorong!</text>
+              <line x1="84" y1="66" x2="84" y2="42" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up-vect)" />
+              <text x="70" y="54" fill="#34d399" fontSize="7" fontWeight="bold">Dorong!</text>
             </g>
           )}
         </g>
       )}
 
-      {/* ================= 2. HORIZONTAL PUSH (PUSH-UP / PRESS) ================= */}
+      {/* ================= 2. HORIZONTAL PUSH (PUSH-UP / DIAMOND) ================= */}
       {category === 'horizontal_push' && (
         <g>
           {isPhase1 ? (
-            // Fase 1: Garis tubuh lurus mendatar paralel lantai, turun terkontrol
+            // Fase 1: Garis tubuh lurus mendatar sejajar lantai, siku membuka 45 derajat
             <g>
-              <line x1="32" y1="62" x2="124" y2="62" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
-              <circle cx="132" cy="62" r="7" fill="#38bdf8" />
-              <line x1="26" y1="78" x2="32" y2="62" stroke="#64748b" strokeWidth="3" />
-              <polyline points="112,62 104,50 114,78" fill="none" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
-              <line x1="78" y1="26" x2="78" y2="50" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down-vect)" strokeDasharray="3 2" />
-              <text x="86" y="38" fill="#38bdf8" fontSize="7.5" fontWeight="bold">Paralel</text>
+              {/* Satu garis punggung lurus mendatar, sejajar lantai */}
+              <line x1="30" y1="58" x2="112" y2="56" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+              <circle cx="122" cy="54" r="6.5" fill="#38bdf8" />
+              {/* Kaki menapak di lantai */}
+              <line x1="30" y1="58" x2="26" y2="80" stroke="#64748b" strokeWidth="3" strokeLinecap="round" />
+              {/* Siku menekuk 45 derajat ke belakang, telapak menancap di lantai */}
+              <polyline points="112,56 96,66 110,80" fill="none" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
+              <line x1="72" y1="22" x2="72" y2="46" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down-vect)" strokeDasharray="3 2" />
+              <text x="80" y="34" fill="#38bdf8" fontSize="7.5" fontWeight="bold">Paralel</text>
             </g>
           ) : (
-            // Fase 2: Puncak dorongan, dada kencang, lengan lurus
+            // Fase 2: Lengan lurus mengunci, dada tetap mendatar lalu naik kencang
             <g>
-              <line x1="32" y1="50" x2="122" y2="38" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
-              <circle cx="130" cy="36" r="7" fill="#10b981" />
-              <line x1="26" y1="78" x2="32" y2="50" stroke="#64748b" strokeWidth="3" />
-              <line x1="108" y1="40" x2="108" y2="78" stroke="#34d399" strokeWidth="3.5" strokeLinecap="round" />
-              <circle cx="108" cy="40" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping" />
-              <circle cx="108" cy="40" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
-              <line x1="108" y1="72" x2="108" y2="50" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up-vect)" />
-              <text x="116" y="60" fill="#34d399" fontSize="7.5" fontWeight="bold">Kencang!</text>
+              <line x1="30" y1="66" x2="112" y2="64" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+              <circle cx="122" cy="62" r="6.5" fill="#10b981" />
+              <line x1="30" y1="66" x2="26" y2="80" stroke="#64748b" strokeWidth="3" strokeLinecap="round" />
+              <line x1="110" y1="66" x2="110" y2="80" stroke="#34d399" strokeWidth="3.5" strokeLinecap="round" />
+              <circle cx="106" cy="64" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping motion-reduce:animate-none" />
+              <circle cx="106" cy="64" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
+              <line x1="124" y1="74" x2="124" y2="52" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up-vect)" />
+              <text x="128" y="46" fill="#34d399" fontSize="7" fontWeight="bold">Kencang!</text>
             </g>
           )}
         </g>
@@ -515,26 +517,29 @@ function PoseVectorGraphic({ category, phase }) {
       {category === 'squat_lunge' && (
         <g>
           {isPhase1 ? (
-            // Fase 1: Torso tegak, pinggul hinge turun
+            // Fase 1: Sudut lutut dan pinggul menekuk 90 derajat, paha sejajar lantai
             <g>
-              <circle cx="70" cy="22" r="7" fill="#38bdf8" />
-              <line x1="70" y1="29" x2="68" y2="52" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
-              <line x1="68" y1="52" x2="86" y2="56" stroke="#e2e8f0" strokeWidth="3.5" strokeLinecap="round" />
-              <line x1="86" y1="56" x2="84" y2="78" stroke="#64748b" strokeWidth="3" strokeLinecap="round" />
-              <line x1="106" y1="26" x2="106" y2="52" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down-vect)" strokeDasharray="3 2" />
-              <text x="114" y="42" fill="#38bdf8" fontSize="7" fontWeight="bold">90° Sudut</text>
+              <circle cx="52" cy="20" r="6.5" fill="#38bdf8" />
+              {/* Torso tegak */}
+              <line x1="52" y1="27" x2="52" y2="50" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+              {/* Paha mendatar sejajar lantai (sudut pinggul 90 derajat) */}
+              <line x1="52" y1="50" x2="78" y2="50" stroke="#e2e8f0" strokeWidth="3.5" strokeLinecap="round" />
+              {/* Betis tegak lurus lantai (sudut lutut 90 derajat) */}
+              <line x1="78" y1="50" x2="78" y2="80" stroke="#64748b" strokeWidth="3" strokeLinecap="round" />
+              <line x1="100" y1="22" x2="100" y2="50" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down-vect)" strokeDasharray="3 2" />
+              <text x="106" y="40" fill="#38bdf8" fontSize="7" fontWeight="bold">90° Sudut</text>
             </g>
           ) : (
-            // Fase 2: Dorong tumit, torso tegak lurus sempurna
+            // Fase 2: Dorong tumit, paha depan & bokong mengunci di posisi tegak
             <g>
-              <circle cx="80" cy="18" r="7" fill="#10b981" />
-              <line x1="80" y1="25" x2="80" y2="52" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
-              <line x1="80" y1="52" x2="76" y2="78" stroke="#34d399" strokeWidth="3.5" strokeLinecap="round" />
-              <line x1="80" y1="52" x2="84" y2="78" stroke="#34d399" strokeWidth="3.5" strokeLinecap="round" />
-              <circle cx="80" cy="52" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping" />
-              <circle cx="80" cy="52" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
-              <line x1="105" y1="68" x2="105" y2="40" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up-vect)" />
-              <text x="112" y="55" fill="#34d399" fontSize="7.5" fontWeight="bold">Kunci Paha!</text>
+              <circle cx="52" cy="14" r="6.5" fill="#10b981" />
+              <line x1="52" y1="21" x2="52" y2="50" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+              <line x1="52" y1="50" x2="50" y2="80" stroke="#34d399" strokeWidth="3.5" strokeLinecap="round" />
+              <line x1="52" y1="50" x2="54" y2="80" stroke="#34d399" strokeWidth="3.5" strokeLinecap="round" />
+              <circle cx="52" cy="50" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping motion-reduce:animate-none" />
+              <circle cx="52" cy="50" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
+              <line x1="100" y1="72" x2="100" y2="44" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up-vect)" />
+              <text x="106" y="60" fill="#34d399" fontSize="7" fontWeight="bold">Kunci Paha!</text>
             </g>
           )}
         </g>
@@ -558,16 +563,19 @@ function PoseVectorGraphic({ category, phase }) {
               <text x="116" y="46" fill="#38bdf8" fontSize="7" fontWeight="bold">Regang</text>
             </g>
           ) : (
-            // Fase 2: Dada ditarik ke palang, siku ke bawah, belikat rapat
+            // Fase 2: Dada ditarik naik ke palang, siku menekuk ke bawah, belikat rapat
             <g>
-              <polyline points="65,16 68,32 78,26" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
-              <polyline points="95,16 92,32 82,26" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
-              <circle cx="80" cy="14" r="7" fill="#10b981" />
+              <polyline points="66,16 74,34 84,26" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
+              <polyline points="94,16 86,34 76,26" fill="none" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
+              {/* Kepala terangkat di atas palang */}
+              <circle cx="80" cy="12" r="6.5" fill="#10b981" />
               <line x1="80" y1="20" x2="80" y2="52" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
-              <circle cx="80" cy="32" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping" />
+              <line x1="80" y1="52" x2="76" y2="74" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="80" y1="52" x2="84" y2="74" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" />
+              <circle cx="80" cy="32" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping motion-reduce:animate-none" />
               <circle cx="80" cy="32" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
-              <line x1="50" y1="52" x2="50" y2="28" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up-vect)" />
-              <text x="24" y="42" fill="#34d399" fontSize="7" fontWeight="bold">Peras Sayap</text>
+              <line x1="110" y1="54" x2="110" y2="30" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up-vect)" />
+              <text x="114" y="44" fill="#34d399" fontSize="7" fontWeight="bold">Peras Sayap</text>
             </g>
           )}
         </g>
@@ -577,25 +585,30 @@ function PoseVectorGraphic({ category, phase }) {
       {category === 'core_floor' && (
         <g>
           {isPhase1 ? (
-            // Fase 1: Garis lurus bertumpu siku & ujung kaki, persiapan napas
+            // Fase 1: Bertumpu pada siku dan ujung kaki di lantai, satu garis lurus kaku
             <g>
-              <line x1="30" y1="66" x2="124" y2="56" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
-              <circle cx="130" cy="54" r="7" fill="#38bdf8" />
-              <line x1="28" y1="78" x2="30" y2="66" stroke="#64748b" strokeWidth="3" />
-              <line x1="114" y1="58" x2="114" y2="78" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
-              <line x1="78" y1="32" x2="78" y2="48" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down-vect)" strokeDasharray="3 2" />
-              <text x="86" y="42" fill="#38bdf8" fontSize="7" fontWeight="bold">Kunci Core</text>
+              {/* Garis tubuh lurus tanpa putus dari ujung kaki ke bahu */}
+              <line x1="34" y1="78" x2="102" y2="62" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+              <circle cx="112" cy="58" r="6.5" fill="#38bdf8" />
+              {/* Lengan bawah rebah menempel lantai */}
+              <line x1="102" y1="62" x2="100" y2="80" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
+              <line x1="100" y1="80" x2="118" y2="80" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
+              {/* Ujung kaki menapak lantai */}
+              <line x1="34" y1="78" x2="30" y2="80" stroke="#64748b" strokeWidth="3" strokeLinecap="round" />
+              <line x1="62" y1="32" x2="76" y2="54" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow-down-vect)" strokeDasharray="3 2" />
+              <text x="78" y="42" fill="#38bdf8" fontSize="7" fontWeight="bold">Kunci Core</text>
             </g>
           ) : (
-            // Fase 2: Kontraksi perut rapat, garis lurus kaku
+            // Fase 2: Pusar ditarik ke tulang belakang, garis tubuh tetap tanpa goyang
             <g>
-              <line x1="30" y1="64" x2="124" y2="54" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
-              <circle cx="130" cy="52" r="7" fill="#10b981" />
-              <line x1="28" y1="78" x2="30" y2="64" stroke="#64748b" strokeWidth="3" />
-              <line x1="114" y1="56" x2="114" y2="78" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
-              <circle cx="77" cy="59" r="8" fill="#f43f5e" opacity="0.3" className="animate-ping" />
-              <circle cx="77" cy="59" r="4.5" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
-              <text x="56" y="42" fill="#34d399" fontSize="7.5" fontWeight="bold">Perut Rapat!</text>
+              <line x1="34" y1="78" x2="102" y2="62" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+              <circle cx="112" cy="58" r="6.5" fill="#10b981" />
+              <line x1="102" y1="62" x2="100" y2="80" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
+              <line x1="100" y1="80" x2="118" y2="80" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
+              <line x1="34" y1="78" x2="30" y2="80" stroke="#64748b" strokeWidth="3" strokeLinecap="round" />
+              <circle cx="70" cy="70" r="8" fill="#f43f5e" opacity="0.3" className="animate-ping motion-reduce:animate-none" />
+              <circle cx="70" cy="70" r="4.5" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
+              <text x="44" y="42" fill="#34d399" fontSize="7.5" fontWeight="bold">Perut Rapat!</text>
             </g>
           )}
         </g>
@@ -625,7 +638,7 @@ function PoseVectorGraphic({ category, phase }) {
               <line x1="80" y1="50" x2="86" y2="70" stroke="#34d399" strokeWidth="3" strokeLinecap="round" />
               <line x1="76" y1="74" x2="76" y2="77" stroke="#38bdf8" strokeWidth="1.5" />
               <line x1="84" y1="74" x2="84" y2="77" stroke="#38bdf8" strokeWidth="1.5" />
-              <circle cx="80" cy="40" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping" />
+              <circle cx="80" cy="40" r="7" fill="#f43f5e" opacity="0.3" className="animate-ping motion-reduce:animate-none" />
               <circle cx="80" cy="40" r="4" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
               <line x1="115" y1="62" x2="115" y2="30" stroke="#34d399" strokeWidth="2.5" markerEnd="url(#arrow-up-vect)" />
               <text x="122" y="46" fill="#34d399" fontSize="7" fontWeight="bold">Terbang!</text>
@@ -647,7 +660,7 @@ function BiomechanicalVectorViewer({ poseData }) {
         <h4 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
           <span>📐</span> Panduan Biomekanika Gerakan
         </h4>
-        <span className="text-xs font-mono font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 truncate max-w-[150px]">
+        <span className="text-xs font-mono font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 truncate max-w-38">
           {label}
         </span>
       </div>
