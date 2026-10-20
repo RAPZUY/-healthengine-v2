@@ -310,17 +310,17 @@ export default function TodoCalendar({
 
   return (
     <section
-      className={`rounded-3xl bg-slate-900/80 p-2 shadow-xl shadow-slate-950/30 ring-1 ring-slate-800 backdrop-blur-sm ${className}`}
+      className={`w-full max-w-[34rem] overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/90 p-5 text-slate-100 shadow-xl shadow-black/40 sm:p-6 ${className}`}
       aria-label="Kalender agenda"
     >
       {/* Header */}
-      <div className="flex items-center justify-between gap-2">
+      <header className="flex items-start justify-between gap-4 border-b border-slate-800 px-1 pb-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/10 text-blue-400">
             <CalendarDays size={18} strokeWidth={2.2} />
           </span>
           <div className="min-w-0">
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-400">
               {calendarOpen ? 'Agenda bulanan' : 'Agenda mingguan'}
             </p>
             <p className="truncate text-sm font-bold text-slate-100">
@@ -331,7 +331,7 @@ export default function TodoCalendar({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5 self-center">
           {addTodoAction}
           <button
             type="button"
@@ -352,7 +352,7 @@ export default function TodoCalendar({
             )}
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Month navigation — only while expanded */}
       <AutoHeight>
@@ -393,12 +393,12 @@ export default function TodoCalendar({
 
       {/* Week strip / full month grid */}
       <AutoHeight>
-        <div>
+        <div className="mt-4">
           <div className="mb-1 grid grid-cols-7 gap-0.5">
             {weekdayLabels.map((label, index) => (
               <span
                 key={`${label}-${index}`}
-                className="text-center text-xs font-semibold uppercase tracking-wide text-slate-600"
+                className="text-center text-xs font-semibold uppercase tracking-wide text-slate-500"
               >
                 {label}
               </span>
@@ -469,7 +469,7 @@ export default function TodoCalendar({
               {items.length}
             </span>
           </h3>
-          <span className="truncate text-xs text-slate-500">
+          <span className="truncate text-xs text-slate-400">
             {selectedDateLabel}
           </span>
         </div>

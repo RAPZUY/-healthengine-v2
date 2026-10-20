@@ -42,6 +42,9 @@ import {
   RollingNumber,
 } from '@/components/ui/motion-primitives';
 
+// Versi rilis tampilan — samakan dengan CACHE_NAME di public/sw.js.
+const APP_VERSION = '3.0.4';
+
 // Hari dalam seminggu
 const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 const DAY_MAP = { 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat', 6: 'Sabtu', 0: 'Minggu' };
@@ -444,7 +447,7 @@ function HealthEngine() {
       toast({
         tone: 'warning',
         text: 'Selesaikan latihan dulu',
-        description: `${currentDayData.title} (${currentDayData.duration}) menunggu. Tekan "Selesaikan Latihan Hari Ini" di Tab Olahraga agar agenda otomatis tercentang.`,
+        description: `${currentDayData.title} (${currentDayData.duration}) menunggu. Ketuk notifikasi ini untuk langsung membuka Tab Olahraga.`,
         actionLabel: 'Buka Tab Olahraga',
         onAction: () => setActiveTab('workout'),
         icon: <Dumbbell size={17} strokeWidth={2.2} />,
@@ -583,7 +586,7 @@ function HealthEngine() {
             <Bot size={22} />
           </div>
           <p className="animate-pulse text-sm text-slate-400">
-            Memuat HealthEngine V3...
+            Memuat HealthEngine V{APP_VERSION}...
           </p>
         </div>
       </div>
@@ -606,7 +609,7 @@ function HealthEngine() {
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-bold text-white">HealthEngine</span>
               <span className="rounded-md border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-xs font-semibold text-emerald-400">
-                V3.0
+                V{APP_VERSION}
               </span>
             </div>
           </div>
@@ -639,7 +642,7 @@ function HealthEngine() {
                 weekStartsOn={1}
                 addTodoAction={
                   <div
-                    className="flex min-h-11 items-center gap-1 rounded-full border border-orange-500/25 bg-orange-500/10 px-2.5 text-orange-400"
+                    className="flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-orange-500/25 bg-orange-500/10 px-2 text-orange-400 sm:px-2.5"
                     title={`Streak latihan ${streak.streak} hari`}
                     aria-label={`Streak latihan ${streak.streak} hari`}
                   >
@@ -648,7 +651,7 @@ function HealthEngine() {
                       value={streak.streak}
                       className="text-xs font-bold"
                     />
-                    <span className="text-xs font-medium text-orange-300/80">
+                    <span className="hidden text-xs font-medium text-orange-300/80 sm:inline">
                       Hari
                     </span>
                     {streak.hasStreakFreeze ? (
