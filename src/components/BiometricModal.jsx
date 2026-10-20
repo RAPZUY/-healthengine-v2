@@ -1,6 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
+import { Activity, Ruler, Scale, Target, UserRound, X } from 'lucide-react';
+import NumberInput from '@/components/ui/NumberInput';
+import { motionTokens } from '@/components/ui/motion-primitives';
+import { useToast } from '@/components/ui/ToastProvider';
 
 const ACTIVITY_OPTIONS = [
   { multiplier: 1.2, title: 'Hampir Nggak Pernah Olahraga', desc: 'Rebahan / duduk seharian' },
@@ -9,83 +14,53 @@ const ACTIVITY_OPTIONS = [
   { multiplier: 1.725, title: 'Sangat Aktif / Atlet', desc: 'Latihan 5-6 hari seminggu' },
 ];
 
+const STRATEGY_OPTIONS = [
+  { id: 'auto', label: 'Otomatis', activeClass: 'bg-blue-600 text-white' },
+  { id: 'bulking', label: 'Bulking', activeClass: 'bg-amber-600 text-white' },
+  { id: 'maintenance', label: 'Maintenance', activeClass: 'bg-emerald-600 text-white' },
+  { id: 'cutting', label: 'Cutting', activeClass: 'bg-rose-600 text-white' },
+];
+
 export default function BiometricModal({ biometrics, onSave, onClose }) {
+  const reduce = useReducedMotion();
+  const { toast } = useToast();
+
   const [gender, setGender] = useState(biometrics.gender || 'male');
-  const [rawAge, setRawAge] = useState(String(biometrics.age ?? 20));
-  const [rawHeight, setRawHeight] = useState(String(biometrics.heightCm ?? 168));
-  const [rawWeight, setRawWeight] = useState(String(biometrics.weightKg ?? 60));
-  const [activityLevel, setActivityLevel] = useState(biometrics.activityLevel || 1.375);
-  const [strategyMode, setStrategyMode] = useState(biometrics.strategyMode || 'auto');
+  const [age, setAge] = useState(Number(biometrics.age) || 20);
+  const [heightCm, setHeightCm] = useState(Number(biometrics.heightCm) || 168);
+  const [weightKg, setWeightKg] = useState(Number(biometrics.weightKg) || 60);
+  const [activityLevel, setActivityLevel] = useState(
+    biometrics.activityLevel || 1.375
+  );
+  const [strategyMode, setStrategyMode] = useState(
+    biometrics.strategyMode || 'auto'
+  );
 
   useEffect(() => {
-    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
+    const handleKey = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [onClose]);
 
-  // Step button handlers
-  const handleStepAge = (step) => {
-    const current = Number(rawAge) || biometrics.age || 20;
-    const next = Math.max(14, Math.min(80, Math.round(current + step)));
-    setRawAge(String(next));
-  };
-
-  const handleStepHeight = (step) => {
-    const current = Number(rawHeight) || biometrics.heightCm || 168;
-    const next = Math.max(120, Math.min(220, Math.round(current + step)));
-    setRawHeight(String(next));
-  };
-
-  const handleStepWeight = (step) => {
-    const current = parseFloat(rawWeight) || biometrics.weightKg || 60;
-    const next = Math.max(30, Math.min(180, Number((current + step).toFixed(1))));
-    setRawWeight(String(next));
-  };
-
-  // Blur validators with clamping
-  const handleBlurAge = () => {
-    const val = Number(rawAge);
-    if (!rawAge.trim() || isNaN(val) || val <= 0) {
-      setRawAge(String(biometrics.age || 20));
-    } else {
-      setRawAge(String(Math.max(14, Math.min(80, Math.round(val)))));
-    }
-  };
-
-  const handleBlurHeight = () => {
-    const val = Number(rawHeight);
-    if (!rawHeight.trim() || isNaN(val) || val <= 0) {
-      setRawHeight(String(biometrics.heightCm || 168));
-    } else {
-      setRawHeight(String(Math.max(120, Math.min(220, Math.round(val)))));
-    }
-  };
-
-  const handleBlurWeight = () => {
-    const val = parseFloat(rawWeight);
-    if (!rawWeight.trim() || isNaN(val) || val <= 0) {
-      setRawWeight(String(biometrics.weightKg || 60));
-    } else {
-      setRawWeight(String(Math.max(30, Math.min(180, Number(val.toFixed(1))))));
-    }
-  };
-
   const handleSave = () => {
-    // Validasi final sebelum simpan
-    const numAge = Number(rawAge);
-    const finalAge = (!rawAge.trim() || isNaN(numAge) || numAge <= 0)
-      ? (biometrics.age || 20)
-      : Math.max(14, Math.min(80, Math.round(numAge)));
+    const finalAge = Math.max(14, Math.min(80, Math.round(Number(age) || 20)));
+    const finalHeight = Math.max(
+      120,
+      Math.min(220, Math.round(Number(heightCm) || 168))
+    );
+    const finalWeight = Math.max(
+      30,
+      Math.min(180, Number((Number(weightKg) || 60).toFixed(1)))
+    );
 
-    const numHeight = Number(rawHeight);
-    const finalHeight = (!rawHeight.trim() || isNaN(numHeight) || numHeight <= 0)
-      ? (biometrics.heightCm || 168)
-      : Math.max(120, Math.min(220, Math.round(numHeight)));
-
-    const numWeight = parseFloat(rawWeight);
-    const finalWeight = (!rawWeight.trim() || isNaN(numWeight) || numWeight <= 0)
-      ? (biometrics.weightKg || 60)
-      : Math.max(30, Math.min(180, Number(numWeight.toFixed(1))));
+    toast({
+      tone: 'success',
+      text: 'Profil Biometrik Disimpan!',
+      description: `Usia ${finalAge} th · Tinggi ${finalHeight} cm · Berat ${finalWeight} kg. Riwayat perkembangan sudah diperbarui.`,
+      duration: 5600,
+    });
 
     onSave({
       gender,
@@ -98,171 +73,147 @@ export default function BiometricModal({ biometrics, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm" onClick={onClose}>
-      <div
-        className="relative w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+      initial={reduce ? { opacity: 0 } : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: motionTokens.duration.fast }}
+      onClick={onClose}
+    >
+      <motion.div
+        className="relative max-h-[90vh] w-full max-w-md overflow-y-auto overscroll-contain rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl"
+        initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 12 }}
+        animate={reduce ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+        transition={motionTokens.spring.morph}
+        onClick={(event) => event.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-100">Edit Profil Biometrik</h2>
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-800 bg-slate-900/95 p-4 backdrop-blur-xl">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/10 text-blue-400">
+              <UserRound size={18} strokeWidth={2.2} />
+            </span>
+            <div>
+              <h2 className="text-base font-bold text-slate-100">
+                Edit Profil Biometrik
+              </h2>
+              <p className="text-xs text-slate-500">
+                Data ini dipakai untuk BMI, TDEE, dan target kalori.
+              </p>
+            </div>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="min-h-11 min-w-11 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center justify-center"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-slate-800 bg-slate-950 text-slate-400 transition hover:bg-slate-800 hover:text-white"
             aria-label="Tutup"
           >
-            ✕
+            <X size={18} strokeWidth={2.3} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-5 space-y-4">
+        <div className="space-y-4 p-4">
           {/* Gender */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300">Jenis Kelamin</label>
+            <label className="text-xs font-semibold text-slate-300">
+              Jenis Kelamin
+            </label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setGender('male')}
                 className={`min-h-11 rounded-xl text-sm font-semibold transition ${
-                  gender === 'male' ? 'bg-blue-600 text-white' : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
+                  gender === 'male'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-950/30'
+                    : 'border border-slate-800 bg-slate-950 text-slate-400 hover:text-white'
                 }`}
               >
-                ♂️ Pria
+                ♂ Pria
               </button>
               <button
                 type="button"
                 onClick={() => setGender('female')}
                 className={`min-h-11 rounded-xl text-sm font-semibold transition ${
-                  gender === 'female' ? 'bg-pink-600 text-white' : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
+                  gender === 'female'
+                    ? 'bg-pink-600 text-white shadow-lg shadow-pink-950/30'
+                    : 'border border-slate-800 bg-slate-950 text-slate-400 hover:text-white'
                 }`}
               >
-                ♀️ Wanita
+                ♀ Wanita
               </button>
             </div>
           </div>
 
-          {/* Age */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs">
-              <label className="font-semibold text-slate-300">Usia (tahun)</label>
-              <span className="text-slate-500 font-mono">14 – 80 th</span>
+          {/* Numeric fields */}
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400">
+              <Ruler size={14} className="text-blue-400" />
+              Antropometri
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleStepAge(-1)}
-                className="min-h-11 min-w-11 flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl border border-slate-800 text-base font-bold transition active:scale-95"
-                aria-label="Kurangi Usia"
-              >
-                –
-              </button>
-              <input
-                type="number"
-                value={rawAge}
-                onChange={(e) => setRawAge(e.target.value)}
-                onBlur={handleBlurAge}
-                onFocus={(e) => e.target.select()}
-                className="flex-1 min-h-11 px-3 text-center rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm font-mono focus:outline-none focus:border-blue-500"
-              />
-              <button
-                type="button"
-                onClick={() => handleStepAge(1)}
-                className="min-h-11 min-w-11 flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl border border-slate-800 text-base font-bold transition active:scale-95"
-                aria-label="Tambah Usia"
-              >
-                +
-              </button>
-            </div>
-          </div>
 
-          {/* Height */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs">
-              <label className="font-semibold text-slate-300">Tinggi Badan (cm)</label>
-              <span className="text-slate-500 font-mono">120 – 220 cm</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleStepHeight(-1)}
-                className="min-h-11 min-w-11 flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl border border-slate-800 text-base font-bold transition active:scale-95"
-                aria-label="Kurangi Tinggi Badan"
-              >
-                –
-              </button>
-              <input
-                type="number"
-                value={rawHeight}
-                onChange={(e) => setRawHeight(e.target.value)}
-                onBlur={handleBlurHeight}
-                onFocus={(e) => e.target.select()}
-                className="flex-1 min-h-11 px-3 text-center rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm font-mono focus:outline-none focus:border-blue-500"
-              />
-              <button
-                type="button"
-                onClick={() => handleStepHeight(1)}
-                className="min-h-11 min-w-11 flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl border border-slate-800 text-base font-bold transition active:scale-95"
-                aria-label="Tambah Tinggi Badan"
-              >
-                +
-              </button>
-            </div>
-          </div>
+            <NumberInput
+              label="Usia"
+              value={age}
+              onChange={setAge}
+              min={14}
+              max={80}
+              step={1}
+              unit="tahun"
+              minError="Usia minimal 14 tahun agar perhitungan tetap relevan."
+              maxError="Usia maksimal 80 tahun untuk kalkulator ini."
+            />
 
-          {/* Weight */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs">
-              <label className="font-semibold text-slate-300">Berat Badan (kg)</label>
-              <span className="text-slate-500 font-mono">30 – 180 kg</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleStepWeight(-0.5)}
-                className="min-h-11 min-w-11 flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl border border-slate-800 text-base font-bold transition active:scale-95"
-                aria-label="Kurangi Berat Badan"
-              >
-                –
-              </button>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={rawWeight}
-                onChange={(e) => setRawWeight(e.target.value.replace(',', '.'))}
-                onBlur={handleBlurWeight}
-                onFocus={(e) => e.target.select()}
-                className="flex-1 min-h-11 px-3 text-center rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm font-mono focus:outline-none focus:border-blue-500"
-              />
-              <button
-                type="button"
-                onClick={() => handleStepWeight(0.5)}
-                className="min-h-11 min-w-11 flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl border border-slate-800 text-base font-bold transition active:scale-95"
-                aria-label="Tambah Berat Badan"
-              >
-                +
-              </button>
-            </div>
+            <NumberInput
+              label="Tinggi Badan"
+              value={heightCm}
+              onChange={setHeightCm}
+              min={120}
+              max={220}
+              step={1}
+              unit="cm"
+              minError="Tinggi minimal 120 cm."
+              maxError="Tinggi maksimal 220 cm."
+            />
+
+            <NumberInput
+              label="Berat Badan"
+              value={weightKg}
+              onChange={setWeightKg}
+              min={30}
+              max={180}
+              step={0.5}
+              unit="kg"
+              minError="Berat minimal 30 kg."
+              maxError="Berat maksimal 180 kg."
+            />
           </div>
 
           {/* Activity Level */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300">Aktivitas Fisik</label>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
+              <Activity size={14} className="text-emerald-400" />
+              Aktivitas Fisik
+            </div>
             <div className="space-y-1.5">
-              {ACTIVITY_OPTIONS.map((opt) => (
+              {ACTIVITY_OPTIONS.map((option) => (
                 <button
-                  key={opt.multiplier}
+                  key={option.multiplier}
                   type="button"
-                  onClick={() => setActivityLevel(opt.multiplier)}
-                  className={`w-full min-h-11 text-left px-3 py-2.5 rounded-xl border text-xs transition ${
-                    activityLevel === opt.multiplier
-                      ? 'bg-blue-600/15 border-blue-500 text-white'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                  onClick={() => setActivityLevel(option.multiplier)}
+                  className={`w-full min-h-11 rounded-xl border px-3 py-2.5 text-left text-xs transition ${
+                    activityLevel === option.multiplier
+                      ? 'border-blue-500/60 bg-blue-600/15 text-white'
+                      : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
                   }`}
                 >
-                  <span className="font-semibold">{opt.title}</span>
-                  <span className="text-slate-500 ml-2">×{opt.multiplier}</span>
+                  <span className="font-semibold">{option.title}</span>
+                  <span className="ml-2 text-slate-500">
+                    ×{option.multiplier}
+                  </span>
+                  <span className="mt-0.5 block text-slate-500">
+                    {option.desc}
+                  </span>
                 </button>
               ))}
             </div>
@@ -270,55 +221,60 @@ export default function BiometricModal({ biometrics, onSave, onClose }) {
 
           {/* Strategy Mode */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300">Mode Strategi</label>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
+              <Target size={14} className="text-amber-400" />
+              Mode Strategi
+            </div>
             <div className="grid grid-cols-2 gap-2">
-              {[
-                { id: 'auto', label: 'Otomatis' },
-                { id: 'bulking', label: 'Bulking' },
-                { id: 'maintenance', label: 'Maintenance' },
-                { id: 'cutting', label: 'Cutting' },
-              ].map((s) => {
-                const isSelected = strategyMode === s.id;
-                let activeClass = 'bg-blue-600 text-white';
-                if (s.id === 'bulking') activeClass = 'bg-amber-600 text-white';
-                if (s.id === 'maintenance') activeClass = 'bg-emerald-600 text-white';
-                if (s.id === 'cutting') activeClass = 'bg-rose-600 text-white';
-
+              {STRATEGY_OPTIONS.map((strategy) => {
+                const isSelected = strategyMode === strategy.id;
                 return (
                   <button
-                    key={s.id}
+                    key={strategy.id}
                     type="button"
-                    onClick={() => setStrategyMode(s.id)}
+                    onClick={() => setStrategyMode(strategy.id)}
                     className={`min-h-11 rounded-xl text-xs font-semibold transition ${
-                      isSelected ? activeClass : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
+                      isSelected
+                        ? strategy.activeClass
+                        : 'border border-slate-800 bg-slate-950 text-slate-400 hover:text-white'
                     }`}
                   >
-                    {s.label}
+                    {strategy.label}
                   </button>
                 );
               })}
             </div>
           </div>
+
+          <div className="flex items-start gap-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-3 text-xs leading-relaxed text-slate-400">
+            <Scale size={15} className="mt-0.5 shrink-0 text-slate-500" />
+            <p>
+              Berat badan akan otomatis dicatat ke riwayat perkembangan hari ini
+              saat kamu menyimpan profil.
+            </p>
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t border-slate-800 space-y-2">
-          <button
+        <div className="space-y-2 border-t border-slate-800 p-4">
+          <motion.button
             type="button"
             onClick={handleSave}
-            className="w-full min-h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition active:scale-95"
+            whileTap={reduce ? undefined : { scale: 0.98 }}
+            transition={motionTokens.spring.smooth}
+            className="min-h-11 w-full rounded-xl bg-emerald-600 text-sm font-bold text-white transition hover:bg-emerald-500"
           >
-            Simpan & Catat Perkembangan
-          </button>
+            Simpan &amp; Catat Perkembangan
+          </motion.button>
           <button
             type="button"
             onClick={onClose}
-            className="w-full min-h-11 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 hover:text-white text-sm font-medium transition"
+            className="min-h-11 w-full rounded-xl border border-slate-800 bg-slate-950 text-sm font-medium text-slate-400 transition hover:text-white"
           >
             Batal
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

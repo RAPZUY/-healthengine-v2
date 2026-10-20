@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import { RollingNumber } from '@/components/ui/motion-primitives';
 
 export default function WeightProgressCard({ weightHistory = [], weightTarget, activeGoal }) {
   const sortedHistory = useMemo(() => {
@@ -95,7 +96,9 @@ export default function WeightProgressCard({ weightHistory = [], weightTarget, a
       <div className="flex items-center gap-2">
         <span className="text-base">📈</span>
         <h3 className="text-sm font-bold text-slate-100">Perkembangan Berat Badan</h3>
-        <span className="text-xs text-slate-500 font-mono ml-auto">{weightHistory.length} catatan</span>
+        <span className="text-xs text-slate-500 font-mono ml-auto">
+          <RollingNumber value={weightHistory.length} /> catatan
+        </span>
       </div>
 
       {/* SVG Sparkline */}
@@ -137,7 +140,9 @@ export default function WeightProgressCard({ weightHistory = [], weightTarget, a
           return (
             <div key={entry.date} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs">
               <span className="text-slate-500 font-mono w-12 shrink-0">{dateFormatted.slice(0, 5)}</span>
-              <span className="font-bold font-mono text-slate-100">{entry.weight} kg</span>
+              <span className="font-bold font-mono text-slate-100">
+                <RollingNumber value={entry.weight} maximumFractionDigits={1} /> kg
+              </span>
               {changeInfo && (
                 <>
                   <span className={`font-mono font-semibold ${changeInfo.badgeColor}`}>{changeInfo.badge}</span>

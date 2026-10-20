@@ -1,6 +1,20 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
+import {
+  Bot,
+  CalendarCheck2,
+  Dumbbell,
+  Flame,
+  Home,
+  Moon,
+  RefreshCw,
+  Sparkles,
+  Trophy,
+  UserRound,
+  UtensilsCrossed,
+} from 'lucide-react';
 import {
   calculateBMI,
   getBMICategory,
@@ -14,13 +28,19 @@ import {
 } from '@/utils/healthCalculations';
 import { WEEKLY_MEALS, BASE_DAILY_CALORIES, DAILY_FRUITS } from '@/data/nutritionData';
 import { WORKOUT_SCHEDULE, EQUIPMENT_LIST } from '@/data/workoutData';
-import ArcGauge from '@/components/ArcGauge';
 import MealDetailModal from '@/components/MealDetailModal';
 import BiometricModal from '@/components/BiometricModal';
 import MuscleAnatomyModal from '@/components/MuscleAnatomyModal';
 import MartialArtsSection from '@/components/MartialArtsSection';
 import WeightProgressCard from '@/components/WeightProgressCard';
 import InstallPwaBanner from '@/components/InstallPwaBanner';
+import TodoCalendar from '@/components/ui/TodoCalendar';
+import { ToastProvider, useToast } from '@/components/ui/ToastProvider';
+import {
+  motionTokens,
+  MorphingText,
+  RollingNumber,
+} from '@/components/ui/motion-primitives';
 
 // Hari dalam seminggu
 const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
@@ -30,6 +50,11 @@ function getTodayDayName() {
   return DAY_MAP[new Date().getDay()];
 }
 
+function getDayNameFromDateKey(key) {
+  const date = new Date(`${key}T00:00:00`);
+  return DAY_MAP[date.getDay()] ?? getTodayDayName();
+}
+
 function getWeekDates() {
   const today = new Date();
   const dayOfWeek = today.getDay(); // 0=Minggu
@@ -37,10 +62,15 @@ function getWeekDates() {
   const monday = new Date(today);
   monday.setDate(today.getDate() + mondayOffset);
 
-  return DAY_NAMES.map((name, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return { name, date: getLocalDateString(d), dayNum: d.getDate(), isToday: getLocalDateString(d) === getLocalDateString(today) };
+  return DAY_NAMES.map((name, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+    return {
+      name,
+      date: getLocalDateString(date),
+      dayNum: date.getDate(),
+      isToday: getLocalDateString(date) === getLocalDateString(today),
+    };
   });
 }
 
@@ -69,9 +99,33 @@ const MUSCLE_LABELS_ID = {
 };
 
 // Default state
-const DEFAULT_BIO = { gender: 'male', age: 20, heightCm: 168, weightKg: 60, activityLevel: 1.375, strategyMode: 'auto' };
+const DEFAULT_BIO = {
+  gender: 'male',
+  age: 20,
+  heightCm: 168,
+  weightKg: 60,
+  activityLevel: 1.375,
+  strategyMode: 'auto',
+};
+
+const NAV_TABS = [
+  { id: 'home', label: 'Beranda', icon: Home },
+  { id: 'workout', label: 'Olahraga', icon: Dumbbell },
+  { id: 'meals', label: 'Makanan', icon: UtensilsCrossed },
+];
 
 export default function HealthAppPage() {
+  return (
+    <ToastProvider position="top-center">
+      <HealthEngine />
+    </ToastProvider>
+  );
+}
+
+function HealthEngine() {
+  const reduce = useReducedMotion();
+  const { toast } = useToast();
+
   // Core state
   const [isLoaded, setIsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
@@ -80,9 +134,10 @@ export default function HealthAppPage() {
   const [bio, setBio] = useState(DEFAULT_BIO);
   const [ownedEquipment, setOwnedEquipment] = useState(['bodyweight']);
   const [completedDates, setCompletedDates] = useState([]);
-  const [swappedSlots, setSwappedSlots] = useState({}); // { 'Senin-0': 1, 'Senin-1': 0 }
+  const [swappedSlots, setSwappedSlots] = useState({});
   const [weightHistory, setWeightHistory] = useState([]);
   const [selectedDayName, setSelectedDayName] = useState(getTodayDayName());
+  const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
   const [budgetTier, setBudgetTier] = useState('budget');
 
   // Modal state
@@ -93,9 +148,13 @@ export default function HealthAppPage() {
   // ==================== PERSISTENCE ====================
   useEffect(() => {
     try {
+      const v3Data = localStorage.getItem('healtyapp_v3_state');
       const v2Data = localStorage.getItem('healtyapp_v2_state');
-      if (v2Data) {
-        const parsed = JSON.parse(v2Data);
+      const savedData = v3Data || v2Data;
+
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        /* eslint-disable react-hooks/set-state-in-effect -- localStorage is only readable after hydration; this sets the persisted snapshot once */
         if (parsed.bio) setBio({ ...DEFAULT_BIO, ...parsed.bio });
         if (parsed.ownedEquipment) setOwnedEquipment(parsed.ownedEquipment);
         if (parsed.completedDates) setCompletedDates(parsed.completedDates);
@@ -103,6 +162,7 @@ export default function HealthAppPage() {
         if (parsed.weightHistory) setWeightHistory(parsed.weightHistory);
         if (parsed.budgetTier) setBudgetTier(parsed.budgetTier);
         if (parsed.skipFruit !== undefined) setSkipFruit(parsed.skipFruit);
+        /* eslint-enable react-hooks/set-state-in-effect */
       } else {
         // Migrate from v1
         const v1Data = localStorage.getItem('healtyapp_biometrics_v1');
@@ -139,24 +199,60 @@ export default function HealthAppPage() {
     }
   }, []);
 
+  // Keep tab changes predictable on mobile: always start at the top.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.scrollTo({ top: 0, left: 0 });
+  }, [activeTab]);
+
   // Auto-save
   useEffect(() => {
     if (!isLoaded) return;
     try {
-      localStorage.setItem('healtyapp_v2_state', JSON.stringify({
-        bio, ownedEquipment, completedDates, swappedSlots, weightHistory, budgetTier, skipFruit,
-      }));
+      localStorage.setItem(
+        'healtyapp_v3_state',
+        JSON.stringify({
+          bio,
+          ownedEquipment,
+          completedDates,
+          swappedSlots,
+          weightHistory,
+          budgetTier,
+          skipFruit,
+        })
+      );
     } catch (err) {
       console.warn('Gagal menyimpan:', err);
     }
-  }, [bio, ownedEquipment, completedDates, swappedSlots, weightHistory, budgetTier, skipFruit, isLoaded]);
+  }, [
+    bio,
+    ownedEquipment,
+    completedDates,
+    swappedSlots,
+    weightHistory,
+    budgetTier,
+    skipFruit,
+    isLoaded,
+  ]);
 
   // ==================== CALCULATIONS ====================
-  const bmi = useMemo(() => calculateBMI(bio.weightKg, bio.heightCm), [bio.weightKg, bio.heightCm]);
+  const bmi = useMemo(
+    () => calculateBMI(bio.weightKg, bio.heightCm),
+    [bio.weightKg, bio.heightCm]
+  );
   const bmiCategory = useMemo(() => getBMICategory(bmi), [bmi]);
-  const weightTarget = useMemo(() => getWeightTargetAnalysis(bio.weightKg, bio.heightCm), [bio.weightKg, bio.heightCm]);
-  const bmr = useMemo(() => calculateBMR(bio.gender, bio.weightKg, bio.heightCm, bio.age), [bio]);
-  const tdee = useMemo(() => calculateTDEE(bmr, bio.activityLevel), [bmr, bio.activityLevel]);
+  const weightTarget = useMemo(
+    () => getWeightTargetAnalysis(bio.weightKg, bio.heightCm),
+    [bio.weightKg, bio.heightCm]
+  );
+  const bmr = useMemo(
+    () => calculateBMR(bio.gender, bio.weightKg, bio.heightCm, bio.age),
+    [bio]
+  );
+  const tdee = useMemo(
+    () => calculateTDEE(bmr, bio.activityLevel),
+    [bmr, bio.activityLevel]
+  );
 
   const activeGoal = useMemo(() => {
     if (bio.strategyMode !== 'auto') return bio.strategyMode;
@@ -165,32 +261,55 @@ export default function HealthAppPage() {
     return 'maintenance';
   }, [bio.strategyMode, bmi]);
 
-  const strategy = useMemo(() => getStrategyDetails(activeGoal, tdee, bio.weightKg), [activeGoal, tdee, bio.weightKg]);
+  const strategy = useMemo(
+    () => getStrategyDetails(activeGoal, tdee, bio.weightKg),
+    [activeGoal, tdee, bio.weightKg]
+  );
 
   const weekDates = useMemo(() => getWeekDates(), []);
   const todayStr = useMemo(() => getLocalDateString(), []);
   const completedSet = useMemo(() => new Set(completedDates), [completedDates]);
-  const isTodayCompleted = completedSet.has(todayStr);
-
-  const streak = useMemo(() => calculateWorkoutStreak(completedDates), [completedDates]);
+  const isSelectedDateCompleted = completedSet.has(selectedDate);
+  const streak = useMemo(
+    () => calculateWorkoutStreak(completedDates),
+    [completedDates]
+  );
 
   // Current day workout
   const currentDayData = useMemo(() => {
-    return WORKOUT_SCHEDULE.find((d) => d.day === selectedDayName) || WORKOUT_SCHEDULE[0];
+    return (
+      WORKOUT_SCHEDULE.find((day) => day.day === selectedDayName) ||
+      WORKOUT_SCHEDULE[0]
+    );
   }, [selectedDayName]);
 
   // Get active variation for each slot (considering owned equipment and swaps)
-  const getActiveVariation = useCallback((dayName, slotIdx, slot) => {
-    const swapKey = `${dayName}-${slotIdx}`;
-    const swapIdx = swappedSlots[swapKey];
+  const getActiveVariation = useCallback(
+    (dayName, slotIndex, slot) => {
+      const swapKey = `${dayName}-${slotIndex}`;
+      const swapIndex = swappedSlots[swapKey];
 
-    // Filter variations by owned equipment
-    const available = slot.variations.filter((v) => ownedEquipment.includes(v.equipment));
-    if (available.length === 0) return { variation: slot.variations[0], availableCount: slot.variations.length, currentIdx: 0 };
+      const available = slot.variations.filter((variation) =>
+        ownedEquipment.includes(variation.equipment)
+      );
+      if (available.length === 0) {
+        return {
+          variation: slot.variations[0],
+          availableCount: slot.variations.length,
+          currentIndex: 0,
+        };
+      }
 
-    const idx = (swapIdx !== undefined ? swapIdx : 0) % available.length;
-    return { variation: available[idx], availableCount: available.length, currentIdx: idx };
-  }, [ownedEquipment, swappedSlots]);
+      const index =
+        (swapIndex !== undefined ? swapIndex : 0) % available.length;
+      return {
+        variation: available[index],
+        availableCount: available.length,
+        currentIndex: index,
+      };
+    },
+    [ownedEquipment, swappedSlots]
+  );
 
   // Active Fruit data
   const activeFruit = useMemo(() => {
@@ -198,44 +317,161 @@ export default function HealthAppPage() {
   }, [selectedDayName]);
 
   // ==================== HANDLERS ====================
+  const handleSelectDate = useCallback((dateKey) => {
+    setSelectedDate(dateKey);
+    setSelectedDayName(getDayNameFromDateKey(dateKey));
+  }, []);
+
+  const handleSelectDayName = useCallback(
+    (dayName) => {
+      setSelectedDayName(dayName);
+      const matchedDate = weekDates.find((entry) => entry.name === dayName);
+      if (matchedDate) setSelectedDate(matchedDate.date);
+    },
+    [weekDates]
+  );
+
   const handleBioSave = (newBio) => {
     setBio(newBio);
     // Upsert weight history
     const today = getLocalDateString();
-    setWeightHistory((prev) => {
-      const existing = prev.findIndex((e) => e.date === today);
+    setWeightHistory((previous) => {
+      const existing = previous.findIndex((entry) => entry.date === today);
       if (existing >= 0) {
-        const updated = [...prev];
+        const updated = [...previous];
         updated[existing] = { date: today, weight: newBio.weightKg };
         return updated;
       }
-      return [...prev, { date: today, weight: newBio.weightKg }];
+      return [...previous, { date: today, weight: newBio.weightKg }];
     });
     setShowBioModal(false);
   };
 
-  const handleSwapVariation = (dayName, slotIdx, slot) => {
-    const swapKey = `${dayName}-${slotIdx}`;
-    const available = slot.variations.filter((v) => ownedEquipment.includes(v.equipment));
+  const handleSwapVariation = (dayName, slotIndex, slot) => {
+    const swapKey = `${dayName}-${slotIndex}`;
+    const available = slot.variations.filter((variation) =>
+      ownedEquipment.includes(variation.equipment)
+    );
     if (available.length <= 1) return;
 
-    setSwappedSlots((prev) => {
-      const current = prev[swapKey] || 0;
-      return { ...prev, [swapKey]: (current + 1) % available.length };
+    const current = swappedSlots[swapKey] || 0;
+    const nextIndex = (current + 1) % available.length;
+    const nextVariation = available[nextIndex];
+
+    setSwappedSlots((previous) => ({
+      ...previous,
+      [swapKey]: nextIndex,
+    }));
+
+    toast({
+      tone: 'neutral',
+      text: 'Variasi gerakan diganti',
+      description: `${nextVariation.name} · ${dayName} · ${nextVariation.setsReps}`,
+      icon: <RefreshCw size={17} strokeWidth={2.2} />,
     });
   };
 
-  const handleCheckIn = () => {
-    if (!isTodayCompleted) {
-      setCompletedDates((prev) => [...prev, todayStr]);
+  const handleToggleWorkoutComplete = () => {
+    const dateKey = selectedDate;
+    const wasCompleted = completedSet.has(dateKey);
+
+    if (wasCompleted) {
+      setCompletedDates((previous) =>
+        previous.filter((date) => date !== dateKey)
+      );
+      toast({
+        tone: 'neutral',
+        text: 'Status latihan dibatalkan',
+        description: `Agenda ${currentDayData.title} kembali terbuka. Kamu bisa menyelesaikannya lagi kapan saja.`,
+        icon: <RefreshCw size={17} strokeWidth={2.2} />,
+      });
+      return;
     }
+
+    setCompletedDates((previous) =>
+      previous.includes(dateKey) ? previous : [...previous, dateKey]
+    );
+
+    const nextCompleted = [...completedDates, dateKey];
+    const nextStreak = calculateWorkoutStreak(nextCompleted);
+    toast({
+      tone: 'success',
+      text: 'Latihan Selesai! 🔥',
+      description: `${currentDayData.title} tercatat selesai. Streak latihanmu sekarang ${nextStreak.streak} hari.`,
+      icon: <Trophy size={17} strokeWidth={2.2} />,
+      actionLabel: 'Lihat Agenda Beranda',
+      onAction: () => setActiveTab('home'),
+      duration: 6000,
+    });
   };
 
-  const toggleEquipment = (eqId) => {
-    if (eqId === 'bodyweight') return; // Always on
-    setOwnedEquipment((prev) =>
-      prev.includes(eqId) ? prev.filter((e) => e !== eqId) : [...prev, eqId]
+  const handleToggleEquipment = (equipmentId) => {
+    if (equipmentId === 'bodyweight') return; // Always on
+    setOwnedEquipment((previous) =>
+      previous.includes(equipmentId)
+        ? previous.filter((id) => id !== equipmentId)
+        : [...previous, equipmentId]
     );
+  };
+
+  const handleToggleSkipFruit = () => {
+    const nextValue = !skipFruit;
+    setSkipFruit(nextValue);
+
+    toast({
+      tone: nextValue ? 'warning' : 'success',
+      text: nextValue ? 'Buah dilewati hari ini' : 'Buah diaktifkan kembali',
+      description: nextValue
+        ? `${activeFruit.calories} kkal dan ${activeFruit.carbs}g karbo dari ${activeFruit.name} dialihkan ke jajan.`
+        : `Jatah ${activeFruit.name} kembali aktif di menu ${selectedDayName}.`,
+      icon: <Sparkles size={17} strokeWidth={2.2} />,
+    });
+  };
+
+  const handleAgendaItemClick = (item) => {
+    if (item.type === 'workout') {
+      if (isSelectedDateCompleted) {
+        toast({
+          tone: 'success',
+          text: 'Latihan sudah selesai',
+          description: `${currentDayData.title} sudah tercatat untuk tanggal ini. Jaga hidrasi dan asupan proteinmu.`,
+          icon: <CalendarCheck2 size={17} strokeWidth={2.2} />,
+        });
+        return;
+      }
+
+      setActiveTab('workout');
+      toast({
+        tone: 'warning',
+        text: 'Selesaikan latihan dulu',
+        description: `${currentDayData.title} (${currentDayData.duration}) menunggu. Tekan "Selesaikan Latihan Hari Ini" di Tab Olahraga agar agenda otomatis tercentang.`,
+        actionLabel: 'Buka Tab Olahraga',
+        onAction: () => setActiveTab('workout'),
+        icon: <Dumbbell size={17} strokeWidth={2.2} />,
+        duration: 6500,
+      });
+      return;
+    }
+
+    if (item.type === 'nutrition') {
+      setActiveTab('meals');
+      toast({
+        tone: 'neutral',
+        text: 'Target nutrisi dibuka',
+        description: `${strategy.title} · ${strategy.targetCalories} kkal hari ini. Geser hari atau budget sesuai kebutuhanmu.`,
+        actionLabel: 'Lihat Menu Makanan',
+        onAction: () => setActiveTab('meals'),
+        icon: <UtensilsCrossed size={17} strokeWidth={2.2} />,
+      });
+      return;
+    }
+
+    toast({
+      tone: 'success',
+      text: 'Hari pemulihan aktif',
+      description: 'Tidur 7-8 jam, minum 2L air, dan lakukan peregangan ringan. Streak tetap terjaga.',
+      icon: <Moon size={17} strokeWidth={2.2} />,
+    });
   };
 
   // ==================== MEAL SCALING & FRUIT REALLOCATION ====================
@@ -245,13 +481,21 @@ export default function HealthAppPage() {
     const tierData = dayData[budgetTier];
     if (!tierData) return null;
 
-    const baseCal = BASE_DAILY_CALORIES[budgetTier] || 1400;
-    const targetCal = strategy.targetCalories;
+    const baseCalories = BASE_DAILY_CALORIES[budgetTier] || 1400;
+    const targetCalories = strategy.targetCalories;
 
-    const breakfast = scaleMealToTarget(tierData.breakfast, targetCal, baseCal);
-    const lunch = scaleMealToTarget(tierData.lunch, targetCal, baseCal);
-    let snack = scaleMealToTarget(tierData.snack, targetCal, baseCal);
-    const dinner = scaleMealToTarget(tierData.dinner, targetCal, baseCal);
+    const breakfast = scaleMealToTarget(
+      tierData.breakfast,
+      targetCalories,
+      baseCalories
+    );
+    const lunch = scaleMealToTarget(tierData.lunch, targetCalories, baseCalories);
+    let snack = scaleMealToTarget(tierData.snack, targetCalories, baseCalories);
+    const dinner = scaleMealToTarget(
+      tierData.dinner,
+      targetCalories,
+      baseCalories
+    );
 
     // Alokasikan kalori dan karbohidrat buah harian ke Jajan jika skipFruit diaktifkan
     if (skipFruit && activeFruit) {
@@ -264,613 +508,916 @@ export default function HealthAppPage() {
       };
     }
 
-    return {
-      breakfast,
-      lunch,
-      snack,
-      dinner,
-    };
-  }, [selectedDayName, budgetTier, strategy.targetCalories, skipFruit, activeFruit]);
+    return { breakfast, lunch, snack, dinner };
+  }, [
+    selectedDayName,
+    budgetTier,
+    strategy.targetCalories,
+    skipFruit,
+    activeFruit,
+  ]);
+
+  const dayTotals = useMemo(() => {
+    if (!dayMeals) return null;
+    return Object.values(dayMeals).reduce(
+      (totals, meal) => ({
+        calories: totals.calories + meal.calories,
+        protein: totals.protein + meal.protein,
+        carbs: totals.carbs + meal.carbs,
+        fat: totals.fat + meal.fat,
+      }),
+      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    );
+  }, [dayMeals]);
+
+  const agendaItems = useMemo(() => {
+    const dayData =
+      WORKOUT_SCHEDULE.find((day) => day.day === selectedDayName) ||
+      WORKOUT_SCHEDULE[0];
+    const items = [];
+
+    if (dayData.isRestDay) {
+      items.push({
+        id: `rest-${selectedDate}`,
+        type: 'rest',
+        title: 'Pemulihan Aktif & Peregangan (Streak Terjaga)',
+        description: `${dayData.duration} · Hidrasi 2L dan tidur 7-8 jam agar otot pulih optimal.`,
+        completed: true,
+      });
+    } else {
+      items.push({
+        id: `workout-${selectedDate}`,
+        type: 'workout',
+        title: `Wajib Olahraga: ${dayData.title}`,
+        description: `${dayData.duration} · ${dayData.slots.length} gerakan · ${
+          isSelectedDateCompleted
+            ? 'Sudah selesai. Pertahankan asupan proteinmu.'
+            : 'Ketuk untuk membuka Tab Olahraga dan menyelesaikan latihan.'
+        }`,
+        completed: isSelectedDateCompleted,
+      });
+    }
+
+    items.push({
+      id: `nutrition-${selectedDate}`,
+      type: 'nutrition',
+      title: `Nutrisi Harian: ${strategy.targetCalories} kkal`,
+      description: `${strategy.title} · Protein ${strategy.macros.proteinG}g · Karbo ${strategy.macros.carbsG}g · Lemak ${strategy.macros.fatG}g`,
+      completed: false,
+    });
+
+    return items;
+  }, [
+    selectedDayName,
+    selectedDate,
+    isSelectedDateCompleted,
+    strategy,
+  ]);
 
   // Prevent hydration mismatch
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="animate-pulse text-slate-400 text-sm">Memuat HealthEngine...</div>
+      <div className="flex min-h-dvh items-center justify-center bg-slate-950">
+        <div className="space-y-3 text-center">
+          <div className="mx-auto flex h-12 w-12 animate-pulse items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/10 text-blue-400">
+            <Bot size={22} />
+          </div>
+          <p className="animate-pulse text-sm text-slate-400">
+            Memuat HealthEngine V3...
+          </p>
+        </div>
       </div>
     );
   }
 
+  const activeTabLabel =
+    NAV_TABS.find((tab) => tab.id === activeTab)?.label ?? 'Beranda';
+
   // ==================== RENDER ====================
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 overflow-x-hidden">
+    <div className="min-h-dvh overflow-x-hidden bg-slate-950 text-slate-100">
       {/* ==================== HEADER ==================== */}
-      <header className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur border-b border-slate-800">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+      <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+        <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-3 sm:px-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-emerald-500 flex items-center justify-center text-white font-bold text-sm">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-emerald-500 text-sm font-bold text-white shadow-lg shadow-blue-950/40">
               ⚡
             </div>
-            <div>
-              <span className="font-bold text-sm text-white">HealthEngine</span>
-              <span className="ml-1.5 px-1.5 py-0.5 rounded text-xs font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                V2.6
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-bold text-white">HealthEngine</span>
+              <span className="rounded-md border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-xs font-semibold text-emerald-400">
+                V3.0
               </span>
             </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/70 px-2.5 py-1.5 text-slate-300">
+            <span className="text-xs font-semibold">
+              <MorphingText value={activeTabLabel} />
+            </span>
           </div>
         </div>
       </header>
 
       {/* ==================== MAIN CONTENT ==================== */}
-      <main className="max-w-lg mx-auto px-4 pb-24 pt-4">
+      <main className="mx-auto max-w-lg px-3 pb-28 pt-3 sm:px-4 sm:pt-4">
+        <motion.div
+          key={activeTab}
+          initial={reduce ? { opacity: 0 } : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.18, ease: motionTokens.ease.standard }}
+        >
+          {/* ==================== TAB 1: BERANDA ==================== */}
+          {activeTab === 'home' && (
+            <div className="space-y-4">
+              <TodoCalendar
+                selectedDate={selectedDate}
+                onSelectDate={handleSelectDate}
+                items={agendaItems}
+                onItemClick={handleAgendaItemClick}
+                locale="id-ID"
+                weekStartsOn={1}
+                addTodoAction={
+                  <div
+                    className="flex min-h-11 items-center gap-1 rounded-full border border-orange-500/25 bg-orange-500/10 px-2.5 text-orange-400"
+                    title={`Streak latihan ${streak.streak} hari`}
+                    aria-label={`Streak latihan ${streak.streak} hari`}
+                  >
+                    <Flame size={14} strokeWidth={2.4} />
+                    <RollingNumber
+                      value={streak.streak}
+                      className="text-xs font-bold"
+                    />
+                    <span className="text-xs font-medium text-orange-300/80">
+                      Hari
+                    </span>
+                    {streak.hasStreakFreeze ? (
+                      <span className="text-xs" aria-hidden="true">
+                        ❄️
+                      </span>
+                    ) : null}
+                  </div>
+                }
+              />
 
-        {/* ==================== TAB 1: BERANDA ==================== */}
-        {activeTab === 'home' && (
-          <div className="space-y-4">
-            {/* Banner Pasang Aplikasi PWA */}
-            <InstallPwaBanner />
+              {/* Banner Pasang Aplikasi PWA */}
+              <InstallPwaBanner />
 
-            {/* Streak Banner */}
-            <div className="rounded-2xl bg-slate-900 border border-slate-800 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">🔥</span>
-                  <div>
-                    <p className="text-xs text-slate-400">Streak Latihan</p>
-                    <p className="text-2xl font-extrabold font-mono text-white tabular-nums">{streak.streak} <span className="text-sm font-normal text-slate-400">hari</span></p>
+              {/* Biometric Profile Card */}
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-xl shadow-slate-950/20">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-slate-100">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/10 text-blue-400">
+                      <UserRound size={15} strokeWidth={2.2} />
+                    </span>
+                    Profil Biometrik
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowBioModal(true)}
+                    className="min-h-11 rounded-xl border border-slate-700 bg-slate-950 px-3 text-xs font-semibold text-slate-300 transition hover:bg-slate-800 active:scale-95"
+                  >
+                    Edit Profil
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                    <span className="block text-slate-500">Tinggi</span>
+                    <span className="font-mono font-bold text-white">
+                      <RollingNumber value={bio.heightCm} />
+                      <span className="ml-1 text-slate-400">cm</span>
+                    </span>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                    <span className="block text-slate-500">Berat</span>
+                    <span className="font-mono font-bold text-white">
+                      <RollingNumber
+                        value={bio.weightKg}
+                        maximumFractionDigits={1}
+                      />
+                      <span className="ml-1 text-slate-400">kg</span>
+                    </span>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                    <span className="block text-slate-500">Usia</span>
+                    <span className="font-mono font-bold text-white">
+                      <RollingNumber value={bio.age} />
+                      <span className="ml-1 text-slate-400">tahun</span>
+                    </span>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                    <span className="block text-slate-500">BMI</span>
+                    <span className="font-mono font-bold text-white">
+                      <RollingNumber value={bmi} maximumFractionDigits={1} />
+                      <span className="ml-1 text-slate-400">kg/m²</span>
+                    </span>
                   </div>
                 </div>
-                {streak.hasStreakFreeze && (
-                  <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                    ❄️ Streak Freeze
-                  </span>
-                )}
-                {isTodayCompleted && (
-                  <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    ✓ Selesai Hari Ini
-                  </span>
-                )}
+
+                {/* BMI Badge */}
+                <div
+                  className={`mt-3 rounded-xl border px-3 py-2 text-xs font-medium ${bmiCategory.badgeClass}`}
+                >
+                  {bmiCategory.label} — {bmiCategory.advice}
+                </div>
+
+                {/* Target & Strategy */}
+                <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-2.5 text-center">
+                    <span className="block text-xs text-slate-500">
+                      Target Berat
+                    </span>
+                    <span className="font-mono font-bold text-emerald-400">
+                      ~
+                      <RollingNumber
+                        value={weightTarget.targetOptimalKg}
+                        maximumFractionDigits={1}
+                      />
+                      <span className="ml-1">kg</span>
+                    </span>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-2.5 text-center">
+                    <span className="block text-xs text-slate-500">TDEE</span>
+                    <span className="font-mono font-bold text-blue-400">
+                      <RollingNumber value={tdee} />
+                      <span className="ml-1">kkal</span>
+                    </span>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-2.5 text-center">
+                    <span className="block text-xs text-slate-500">
+                      Target Kalori
+                    </span>
+                    <span className="font-mono font-bold text-emerald-400">
+                      <RollingNumber value={strategy.targetCalories} />
+                      <span className="ml-1">kkal</span>
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {/* Weekly Calendar */}
-              <div className="grid grid-cols-7 gap-1">
-                {weekDates.map((wd) => {
-                  const isRest = wd.name === 'Rabu' || wd.name === 'Minggu';
-                  const done = completedSet.has(wd.date);
-                  const isSelected = wd.name === selectedDayName;
+              {/* Weight Progress */}
+              <WeightProgressCard
+                weightHistory={weightHistory}
+                weightTarget={weightTarget}
+                activeGoal={activeGoal}
+              />
+            </div>
+          )}
 
+          {/* ==================== TAB 2: OLAHRAGA ==================== */}
+          {activeTab === 'workout' && (
+            <div className="space-y-4">
+              {/* Sub-tab Switcher: Pembentukan Otot vs Bela Diri Praktis */}
+              <div className="relative flex rounded-2xl border border-slate-800 bg-slate-900 p-1">
+                {[
+                  {
+                    id: 'muscle',
+                    label: 'Pembentukan Otot',
+                    icon: '🏋️',
+                    activeClass: 'bg-blue-600',
+                  },
+                  {
+                    id: 'martial',
+                    label: 'Bela Diri Praktis',
+                    icon: '🥊',
+                    activeClass: 'bg-rose-600',
+                  },
+                ].map((subTab) => {
+                  const isActive = workoutSubTab === subTab.id;
                   return (
                     <button
-                      key={wd.name}
+                      key={subTab.id}
                       type="button"
-                      onClick={() => setSelectedDayName(wd.name)}
-                      className={`min-h-11 rounded-xl border text-center transition flex flex-col items-center justify-center gap-0.5 ${
-                        isSelected
-                          ? 'bg-blue-600 border-blue-500 text-white font-bold'
-                          : done
-                          ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-400'
-                          : isRest
-                          ? 'bg-slate-950 border-slate-800 text-slate-500'
-                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                      onClick={() => setWorkoutSubTab(subTab.id)}
+                      className={`relative flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl text-xs font-bold transition-colors ${
+                        isActive
+                          ? 'text-white'
+                          : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      <span className="text-xs font-semibold">{wd.name.slice(0, 3)}</span>
-                      <span className="text-xs font-mono">{wd.dayNum}</span>
-                      {done && !isSelected && <span className="text-xs">✓</span>}
-                      {isRest && !isSelected && <span className="text-xs">💤</span>}
+                      {isActive ? (
+                        <motion.span
+                          layoutId="workout-subtab-active"
+                          className={`absolute inset-0 rounded-xl shadow-lg ${subTab.activeClass}`}
+                          transition={motionTokens.spring.morph}
+                        />
+                      ) : null}
+                      <span className="relative z-10">{subTab.icon}</span>
+                      <span className="relative z-10">{subTab.label}</span>
                     </button>
                   );
                 })}
               </div>
-            </div>
 
-            {/* Biometric Profile Card */}
-            <div className="rounded-2xl bg-slate-900 border border-slate-800 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-100">📊 Profil Biometrik</h3>
-                <button
-                  type="button"
-                  onClick={() => setShowBioModal(true)}
-                  className="min-h-11 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition"
-                >
-                  Edit BB / Profil
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-                  <span className="text-slate-500 block">Tinggi</span>
-                  <span className="font-bold font-mono text-white">{bio.heightCm} cm</span>
-                </div>
-                <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-                  <span className="text-slate-500 block">Berat</span>
-                  <span className="font-bold font-mono text-white">{bio.weightKg} kg</span>
-                </div>
-                <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-                  <span className="text-slate-500 block">Usia</span>
-                  <span className="font-bold font-mono text-white">{bio.age} tahun</span>
-                </div>
-                <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-                  <span className="text-slate-500 block">BMI</span>
-                  <span className="font-bold font-mono text-white">{bmi} <span className="text-slate-500 font-normal">kg/m²</span></span>
-                </div>
-              </div>
-
-              {/* BMI Badge */}
-              <div className={`px-3 py-2 rounded-lg border text-xs font-medium ${bmiCategory.badgeClass}`}>
-                {bmiCategory.label} — {bmiCategory.advice}
-              </div>
-
-              {/* Target & Strategy */}
-              <div className="grid grid-cols-3 gap-2 text-xs">
-                <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
-                  <span className="text-slate-500 block text-xs">Target Berat</span>
-                  <span className="font-bold text-emerald-400 font-mono">~{weightTarget.targetOptimalKg} kg</span>
-                </div>
-                <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
-                  <span className="text-slate-500 block text-xs">TDEE</span>
-                  <span className="font-bold text-blue-400 font-mono">{tdee} kkal</span>
-                </div>
-                <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
-                  <span className="text-slate-500 block text-xs">Target Kalori</span>
-                  <span className="font-bold text-emerald-400 font-mono">{strategy.targetCalories} kkal</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Weight Progress */}
-            <WeightProgressCard
-              weightHistory={weightHistory}
-              weightTarget={weightTarget}
-              activeGoal={activeGoal}
-            />
-          </div>
-        )}
-
-        {/* ==================== TAB 2: OLAHRAGA ==================== */}
-        {activeTab === 'workout' && (
-          <div className="space-y-4">
-            {/* Sub-tab Switcher: Pembentukan Otot vs Bela Diri Praktis */}
-            <div className="flex p-1 rounded-xl bg-slate-950 border border-slate-800">
-              <button
-                type="button"
-                onClick={() => setWorkoutSubTab('muscle')}
-                className={`flex-1 min-h-11 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                  workoutSubTab === 'muscle'
-                    ? 'bg-blue-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <span>🏋️</span>
-                <span>Pembentukan Otot</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setWorkoutSubTab('martial')}
-                className={`flex-1 min-h-11 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                  workoutSubTab === 'martial'
-                    ? 'bg-rose-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <span>🥊</span>
-                <span>Bela Diri Praktis</span>
-              </button>
-            </div>
-
-            {/* Sub-tab 1: Pembentukan Otot (Gym & Kalistenik) */}
-            {workoutSubTab === 'muscle' && (
-              <div className="space-y-4">
-                {/* Day Selector */}
-                <div className="grid grid-cols-7 gap-1">
-                  {DAY_NAMES.map((day) => {
-                    const isRest = day === 'Rabu' || day === 'Minggu';
-                    const isSelected = day === selectedDayName;
-                    return (
-                      <button
-                        key={day}
-                        type="button"
-                        onClick={() => setSelectedDayName(day)}
-                        className={`min-h-11 rounded-xl border text-center transition flex flex-col items-center justify-center ${
-                          isSelected
-                            ? 'bg-blue-600 border-blue-500 text-white font-bold'
-                            : isRest
-                            ? 'bg-amber-950/20 border-amber-500/20 text-amber-400'
-                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-                        }`}
-                      >
-                        <span className="text-xs font-semibold">{day.slice(0, 3)}</span>
-                        <span className="text-xs font-mono">{isRest ? '💤' : '💪'}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Muscle Focus Header */}
-                <div className="rounded-2xl bg-slate-900 border border-slate-800 p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                      {currentDayData.day}
-                    </span>
-                    {currentDayData.isRestDay && (
-                      <span className="px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                        Hari Istirahat
-                      </span>
-                    )}
-                  </div>
-                  <h2 className="text-lg font-bold text-white">{currentDayData.title}</h2>
-                  <div className="flex items-center gap-2 mt-2 text-xs text-slate-400">
-                    <span>⏱️ {currentDayData.duration}</span>
-                    <span>•</span>
-                    <span>{currentDayData.slots.length} gerakan</span>
-                  </div>
-
-                  {currentDayData.targetMusclesSummary.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {currentDayData.targetMusclesSummary.map((m) => (
-                        <span key={m} className="px-2 py-0.5 rounded text-xs font-medium bg-slate-950 text-slate-300 border border-slate-800">
-                          {m}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Equipment Chips (only on training days) */}
-                {!currentDayData.isRestDay && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-slate-400">Alat yang kamu miliki:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {EQUIPMENT_LIST.map((eq) => {
-                        const isOwned = ownedEquipment.includes(eq.id);
-                        const isDefault = eq.id === 'bodyweight';
-                        return (
-                          <button
-                            key={eq.id}
-                            type="button"
-                            onClick={() => toggleEquipment(eq.id)}
-                            disabled={isDefault}
-                            className={`min-h-11 px-3 rounded-xl border text-xs font-semibold transition flex items-center gap-1.5 ${
-                              isOwned
-                                ? 'bg-emerald-600/15 border-emerald-500/40 text-emerald-400'
-                                : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'
-                            } ${isDefault ? 'cursor-default' : 'cursor-pointer'}`}
-                          >
-                            <span>{eq.emoji}</span>
-                            <span>{eq.label}</span>
-                            {isOwned && <span>✓</span>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Exercise Slots */}
-                {!currentDayData.isRestDay && currentDayData.slots.length > 0 && (
-                  <div className="space-y-3">
-                    {currentDayData.slots.map((slot, slotIdx) => {
-                      const { variation, availableCount, currentIdx } = getActiveVariation(selectedDayName, slotIdx, slot);
+              {/* Sub-tab 1: Pembentukan Otot (Gym & Kalistenik) */}
+              {workoutSubTab === 'muscle' && (
+                <div className="space-y-4">
+                  {/* Day Selector */}
+                  <div className="grid grid-cols-7 gap-1">
+                    {DAY_NAMES.map((day) => {
+                      const isRest = day === 'Rabu' || day === 'Minggu';
+                      const isSelected = day === selectedDayName;
                       return (
-                        <div
-                          key={slotIdx}
-                          className="rounded-xl bg-slate-900 border border-slate-800 p-4 space-y-2 cursor-pointer hover:border-slate-700 transition"
-                          onClick={() => setSelectedExercise(variation)}
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() => handleSelectDayName(day)}
+                          className={`relative flex min-h-11 flex-col items-center justify-center rounded-xl border text-center transition-colors ${
+                            isSelected
+                              ? 'border-blue-500 text-white'
+                              : isRest
+                                ? 'border-amber-500/20 bg-amber-950/20 text-amber-400'
+                                : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
+                          }`}
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs font-mono font-bold text-slate-500">#{slotIdx + 1}</span>
-                                <span className="text-xs text-slate-500">{slot.slotLabel}</span>
-                              </div>
-                              <h4 className="text-sm font-bold text-slate-100 leading-snug">{variation.name}</h4>
-                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                                  {EQUIPMENT_LIST.find((e) => e.id === variation.equipment)?.label || variation.equipment}
-                                </span>
-                                {variation.primaryMuscles.slice(0, 2).map((m) => (
-                                  <span key={m} className="px-2 py-0.5 rounded text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                                    {MUSCLE_LABELS_ID[m] || m}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Swap Button */}
-                            {availableCount > 1 && (
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); handleSwapVariation(selectedDayName, slotIdx, slot); }}
-                                className="min-h-11 min-w-11 px-3 rounded-lg bg-slate-950 border border-slate-800 text-xs font-semibold text-blue-400 hover:bg-slate-800 transition flex items-center gap-1 shrink-0"
-                              >
-                                ⟳ {currentIdx + 1}/{availableCount}
-                              </button>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-3 text-xs font-mono">
-                            <span className="text-emerald-400 font-semibold">{variation.setsReps}</span>
-                            <span className="text-slate-600">|</span>
-                            <span className="text-amber-400">Rest {variation.rest}</span>
-                          </div>
-                        </div>
+                          {isSelected ? (
+                            <motion.span
+                              layoutId="workout-day-active"
+                              className="absolute inset-0 rounded-xl bg-blue-600 shadow-lg shadow-blue-950/40"
+                              transition={motionTokens.spring.morph}
+                            />
+                          ) : null}
+                          <span className="relative z-10 text-xs font-semibold">
+                            {day.slice(0, 3)}
+                          </span>
+                          <span className="relative z-10 text-xs">
+                            {isRest ? '💤' : '💪'}
+                          </span>
+                        </button>
                       );
                     })}
                   </div>
-                )}
 
-                {/* Rest Day Message */}
-                {currentDayData.isRestDay && (
-                  <div className="rounded-2xl bg-slate-900 border border-slate-800 p-6 text-center space-y-3">
-                    <span className="text-4xl">😴</span>
-                    <h3 className="text-lg font-bold text-slate-100">Hari Pemulihan</h3>
-                    <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                      Otot tumbuh saat kamu istirahat, bukan saat latihan. Tidur 7-8 jam, minum 2L air, dan pastikan asupan protein tetap tercukupi.
-                    </p>
-                  </div>
-                )}
-
-                {/* Check-in Button */}
-                {!currentDayData.isRestDay && selectedDayName === getTodayDayName() && (
-                  <button
-                    type="button"
-                    onClick={handleCheckIn}
-                    disabled={isTodayCompleted}
-                    className={`w-full min-h-11 rounded-xl text-sm font-bold transition ${
-                      isTodayCompleted
-                        ? 'bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 cursor-default'
-                        : 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95'
-                    }`}
-                  >
-                    {isTodayCompleted ? '✓ Latihan Hari Ini Selesai!' : '🏁 Selesai Latihan Hari Ini'}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Sub-tab 2: Modul Bela Diri Praktis */}
-            {workoutSubTab === 'martial' && (
-              <MartialArtsSection />
-            )}
-          </div>
-        )}
-
-        {/* ==================== TAB 3: MAKANAN ==================== */}
-        {activeTab === 'meals' && (
-          <div className="space-y-4">
-            {/* Day Selector */}
-            <div className="grid grid-cols-7 gap-1">
-              {DAY_NAMES.map((day) => {
-                const isSelected = day === selectedDayName;
-                return (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => setSelectedDayName(day)}
-                    className={`min-h-11 rounded-xl border text-center transition ${
-                      isSelected
-                        ? 'bg-blue-600 border-blue-500 text-white font-bold'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-                    }`}
-                  >
-                    <span className="text-xs font-semibold">{day.slice(0, 3)}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Budget Filter */}
-            <div className="flex p-1 rounded-xl bg-slate-950 border border-slate-800">
-              <button
-                type="button"
-                onClick={() => setBudgetTier('budget')}
-                className={`flex-1 min-h-11 rounded-lg text-xs font-semibold transition ${
-                  budgetTier === 'budget' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                💰 Anak Kos
-              </button>
-              <button
-                type="button"
-                onClick={() => setBudgetTier('standard')}
-                className={`flex-1 min-h-11 rounded-lg text-xs font-semibold transition ${
-                  budgetTier === 'standard' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                🍱 Standar
-              </button>
-            </div>
-
-            {/* Nutrition Target Banner */}
-            <div className="rounded-2xl bg-slate-900 border border-slate-800 p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-300">Target Nutrisi Harian</span>
-                <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                  activeGoal === 'bulking' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                  : activeGoal === 'cutting' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                  : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                }`}>
-                  {strategy.title}
-                </span>
-              </div>
-              <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                <div className="p-2 rounded-lg bg-slate-950 border border-slate-800">
-                  <span className="text-slate-500 block">Kalori</span>
-                  <span className="font-bold font-mono text-white">{strategy.targetCalories}</span>
-                </div>
-                <div className="p-2 rounded-lg bg-slate-950 border border-blue-500/20">
-                  <span className="text-blue-400 block">Protein</span>
-                  <span className="font-bold font-mono text-blue-400">{strategy.macros.proteinG}g</span>
-                </div>
-                <div className="p-2 rounded-lg bg-slate-950 border border-emerald-500/20">
-                  <span className="text-emerald-400 block">Karbo</span>
-                  <span className="font-bold font-mono text-emerald-400">{strategy.macros.carbsG}g</span>
-                </div>
-                <div className="p-2 rounded-lg bg-slate-950 border border-amber-500/20">
-                  <span className="text-amber-400 block">Lemak</span>
-                  <span className="font-bold font-mono text-amber-400">{strategy.macros.fatG}g</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Kartu Buah Harian & Tombol Pengalihan Kalori */}
-            {activeFruit && (
-              <div className="rounded-2xl bg-slate-900 border border-slate-800 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-2xl">{activeFruit.emoji}</span>
-                    <div>
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Buah Harian ({selectedDayName})</span>
-                      <h4 className="text-sm font-bold text-white">{activeFruit.name}</h4>
+                  {/* Muscle Focus Header */}
+                  <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 font-mono text-xs font-bold text-blue-400">
+                        {currentDayData.day}
+                      </span>
+                      {currentDayData.isRestDay ? (
+                        <span className="rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-400">
+                          Hari Istirahat
+                        </span>
+                      ) : null}
                     </div>
+                    <h2 className="text-lg font-bold text-white">
+                      {currentDayData.title}
+                    </h2>
+                    <div className="mt-2 flex items-center gap-2 text-xs text-slate-400">
+                      <span>⏱️ {currentDayData.duration}</span>
+                      <span>•</span>
+                      <span>{currentDayData.slots.length} gerakan</span>
+                    </div>
+
+                    {currentDayData.targetMusclesSummary.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {currentDayData.targetMusclesSummary.map((muscle) => (
+                          <span
+                            key={muscle}
+                            className="rounded-md border border-slate-800 bg-slate-950 px-2 py-0.5 text-xs font-medium text-slate-300"
+                          >
+                            {muscle}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
-                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                    skipFruit ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                  }`}>
-                    {skipFruit ? 'Kalori Dialihkan' : 'Jatah Aktif'}
+
+                  {/* Equipment Chips (only on training days) */}
+                  {!currentDayData.isRestDay && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-slate-400">
+                        Alat yang kamu miliki:
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {EQUIPMENT_LIST.map((equipment) => {
+                          const isOwned = ownedEquipment.includes(equipment.id);
+                          const isDefault = equipment.id === 'bodyweight';
+                          return (
+                            <button
+                              key={equipment.id}
+                              type="button"
+                              onClick={() => handleToggleEquipment(equipment.id)}
+                              disabled={isDefault}
+                              className={`flex min-h-11 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition ${
+                                isOwned
+                                  ? 'border-emerald-500/40 bg-emerald-600/15 text-emerald-400'
+                                  : 'border-slate-800 bg-slate-950 text-slate-500 hover:border-slate-700'
+                              } ${isDefault ? 'cursor-default' : 'cursor-pointer'}`}
+                            >
+                              <span>{equipment.emoji}</span>
+                              <span>{equipment.label}</span>
+                              {isOwned ? <span>✓</span> : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Exercise Slots */}
+                  {!currentDayData.isRestDay &&
+                    currentDayData.slots.length > 0 && (
+                      <div className="space-y-3">
+                        {currentDayData.slots.map((slot, slotIndex) => {
+                          const { variation, availableCount, currentIndex } =
+                            getActiveVariation(
+                              selectedDayName,
+                              slotIndex,
+                              slot
+                            );
+                          return (
+                            <div
+                              key={slotIndex}
+                              className="cursor-pointer space-y-2 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 transition hover:border-slate-700"
+                              onClick={() => setSelectedExercise(variation)}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <div className="mb-1 flex items-center gap-2">
+                                    <span className="font-mono text-xs font-bold text-slate-500">
+                                      #{slotIndex + 1}
+                                    </span>
+                                    <span className="text-xs text-slate-500">
+                                      {slot.slotLabel}
+                                    </span>
+                                  </div>
+                                  <h4 className="text-sm font-bold leading-snug text-slate-100">
+                                    {variation.name}
+                                  </h4>
+                                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                                    <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-1.5 py-0.5 text-xs font-medium text-blue-400">
+                                      {EQUIPMENT_LIST.find(
+                                        (equipment) =>
+                                          equipment.id === variation.equipment
+                                      )?.label || variation.equipment}
+                                    </span>
+                                    {variation.primaryMuscles
+                                      .slice(0, 2)
+                                      .map((muscle) => (
+                                        <span
+                                          key={muscle}
+                                          className="rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-400"
+                                        >
+                                          {MUSCLE_LABELS_ID[muscle] || muscle}
+                                        </span>
+                                      ))}
+                                  </div>
+                                </div>
+
+                                {/* Swap Button */}
+                                {availableCount > 1 ? (
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleSwapVariation(
+                                        selectedDayName,
+                                        slotIndex,
+                                        slot
+                                      );
+                                    }}
+                                    className="flex min-h-11 min-w-11 shrink-0 items-center gap-1 rounded-xl border border-slate-800 bg-slate-950 px-3 text-xs font-semibold text-blue-400 transition hover:bg-slate-800"
+                                  >
+                                    ⟳ {currentIndex + 1}/{availableCount}
+                                  </button>
+                                ) : null}
+                              </div>
+
+                              <div className="flex items-center gap-3 font-mono text-xs">
+                                <span className="font-semibold text-emerald-400">
+                                  {variation.setsReps}
+                                </span>
+                                <span className="text-slate-600">|</span>
+                                <span className="text-amber-400">
+                                  Rest {variation.rest}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                  {/* Rest Day Message */}
+                  {currentDayData.isRestDay && (
+                    <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-6 text-center">
+                      <span className="text-4xl">😴</span>
+                      <h3 className="text-lg font-bold text-slate-100">
+                        Hari Pemulihan
+                      </h3>
+                      <p className="mx-auto max-w-xs text-xs leading-relaxed text-slate-400">
+                        Otot tumbuh saat kamu istirahat, bukan saat latihan. Tidur
+                        7-8 jam, minum 2L air, dan pastikan asupan protein tetap
+                        tercukupi.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Completion Card */}
+                  {!currentDayData.isRestDay && (
+                    <div className="space-y-2 rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-xs text-slate-500">
+                            Status latihan tanggal ini
+                          </p>
+                          <p
+                            className={`text-sm font-bold ${
+                              isSelectedDateCompleted
+                                ? 'text-emerald-400'
+                                : 'text-slate-200'
+                            }`}
+                          >
+                            {isSelectedDateCompleted
+                              ? 'Selesai & tercatat'
+                              : 'Belum selesai'}
+                          </p>
+                        </div>
+                        <span
+                          className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                            isSelectedDateCompleted
+                              ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
+                              : 'border-slate-700 bg-slate-950 text-slate-400'
+                          }`}
+                        >
+                          {isSelectedDateCompleted ? '✓ Tuntas' : 'Menunggu'}
+                        </span>
+                      </div>
+
+                      <motion.button
+                        type="button"
+                        onClick={handleToggleWorkoutComplete}
+                        whileTap={reduce ? undefined : { scale: 0.98 }}
+                        transition={motionTokens.spring.smooth}
+                        className={`min-h-11 w-full rounded-xl text-sm font-bold transition ${
+                          isSelectedDateCompleted
+                            ? 'border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/15'
+                            : 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/30 hover:bg-emerald-500'
+                        }`}
+                      >
+                        {isSelectedDateCompleted
+                          ? 'Batalkan Status Selesai'
+                          : selectedDate === todayStr
+                            ? 'Selesaikan Latihan Hari Ini'
+                            : 'Tandai Latihan Selesai'}
+                      </motion.button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Sub-tab 2: Modul Bela Diri Praktis */}
+              {workoutSubTab === 'martial' && <MartialArtsSection />}
+            </div>
+          )}
+
+          {/* ==================== TAB 3: MAKANAN ==================== */}
+          {activeTab === 'meals' && (
+            <div className="space-y-4">
+              {/* Day Selector */}
+              <div className="grid grid-cols-7 gap-1">
+                {DAY_NAMES.map((day) => {
+                  const isSelected = day === selectedDayName;
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => handleSelectDayName(day)}
+                      className={`relative min-h-11 rounded-xl border text-center text-xs font-semibold transition-colors ${
+                        isSelected
+                          ? 'border-blue-500 text-white'
+                          : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      {isSelected ? (
+                        <motion.span
+                          layoutId="meal-day-active"
+                          className="absolute inset-0 rounded-xl bg-blue-600 shadow-lg shadow-blue-950/40"
+                          transition={motionTokens.spring.morph}
+                        />
+                      ) : null}
+                      <span className="relative z-10">{day.slice(0, 3)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Budget Filter */}
+              <div className="relative flex rounded-2xl border border-slate-800 bg-slate-900 p-1">
+                {[
+                  {
+                    id: 'budget',
+                    label: '💰 Anak Kos',
+                    activeClass: 'bg-emerald-600',
+                  },
+                  {
+                    id: 'standard',
+                    label: '🍱 Standar',
+                    activeClass: 'bg-blue-600',
+                  },
+                ].map((tier) => {
+                  const isActive = budgetTier === tier.id;
+                  return (
+                    <button
+                      key={tier.id}
+                      type="button"
+                      onClick={() => setBudgetTier(tier.id)}
+                      className={`relative min-h-11 flex-1 rounded-xl text-xs font-semibold transition-colors ${
+                        isActive
+                          ? 'text-white'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {isActive ? (
+                        <motion.span
+                          layoutId="meal-budget-active"
+                          className={`absolute inset-0 rounded-xl shadow-lg ${tier.activeClass}`}
+                          transition={motionTokens.spring.morph}
+                        />
+                      ) : null}
+                      <span className="relative z-10">{tier.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Nutrition Target Banner */}
+              <div className="space-y-2 rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-slate-300">
+                    Target Nutrisi Harian
+                  </span>
+                  <span
+                    className={`rounded-md border px-2 py-0.5 text-xs font-bold ${
+                      activeGoal === 'bulking'
+                        ? 'border-amber-500/20 bg-amber-500/10 text-amber-400'
+                        : activeGoal === 'cutting'
+                          ? 'border-rose-500/20 bg-rose-500/10 text-rose-400'
+                          : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+                    }`}
+                  >
+                    {strategy.title}
                   </span>
                 </div>
-
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-                    <span className="text-slate-500 block">Takaran URT</span>
-                    <span className="font-semibold text-slate-200">{activeFruit.householdPortion}</span>
+                <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
+                    <span className="block text-slate-500">Kalori</span>
+                    <span className="font-mono font-bold text-white">
+                      <RollingNumber value={strategy.targetCalories} />
+                    </span>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-                    <span className="text-slate-500 block">Nilai Kalori</span>
-                    <span className="font-mono font-bold text-emerald-400">{activeFruit.calories} kkal</span>
-                    <span className="text-slate-400 text-xs ml-1">({activeFruit.carbs}g karbo)</span>
+                  <div className="rounded-xl border border-blue-500/20 bg-slate-950/70 p-2">
+                    <span className="block text-blue-400">Protein</span>
+                    <span className="font-mono font-bold text-blue-400">
+                      <RollingNumber value={strategy.macros.proteinG} />g
+                    </span>
+                  </div>
+                  <div className="rounded-xl border border-emerald-500/20 bg-slate-950/70 p-2">
+                    <span className="block text-emerald-400">Karbo</span>
+                    <span className="font-mono font-bold text-emerald-400">
+                      <RollingNumber value={strategy.macros.carbsG} />g
+                    </span>
+                  </div>
+                  <div className="rounded-xl border border-amber-500/20 bg-slate-950/70 p-2">
+                    <span className="block text-amber-400">Lemak</span>
+                    <span className="font-mono font-bold text-amber-400">
+                      <RollingNumber value={strategy.macros.fatG} />g
+                    </span>
                   </div>
                 </div>
-
-                <p className="text-xs text-slate-400 leading-snug">
-                  💡 {activeFruit.benefits}
-                </p>
-
-                {/* Tombol Toggle Skip Fruit */}
-                <button
-                  type="button"
-                  onClick={() => setSkipFruit((prev) => !prev)}
-                  className={`w-full min-h-11 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border ${
-                    skipFruit
-                      ? 'bg-slate-950 border-emerald-500/40 text-emerald-400 hover:bg-slate-800 active:scale-95'
-                      : 'bg-slate-950 border-amber-500/40 text-amber-400 hover:bg-slate-800 active:scale-95'
-                  }`}
-                >
-                  {skipFruit ? (
-                    <>
-                      <span>🔄</span>
-                      <span>Aktifkan Kembali Buah</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>⚡</span>
-                      <span>Lewati Buah & Alihkan Kalori ke Jajan</span>
-                    </>
-                  )}
-                </button>
               </div>
-            )}
 
-            {/* 4 Meal Cards */}
-            {dayMeals && (
-              <div className="space-y-3">
-                {[
-                  { key: 'breakfast', label: '🌅 Sarapan', meal: dayMeals.breakfast },
-                  { key: 'lunch', label: '☀️ Makan Siang', meal: dayMeals.lunch },
-                  { key: 'snack', label: '🥟 Jajan', meal: dayMeals.snack },
-                  { key: 'dinner', label: '🌙 Makan Malam', meal: dayMeals.dinner },
-                ].map(({ key, label, meal }) => (
-                  <div
-                    key={key}
-                    className="rounded-xl bg-slate-900 border border-slate-800 p-4 cursor-pointer hover:border-slate-700 transition space-y-2.5"
-                    onClick={() => setSelectedFoodForModal(meal)}
-                  >
-                    <div className="flex items-start justify-between gap-2">
+              {/* Kartu Buah Harian & Tombol Pengalihan Kalori */}
+              {activeFruit && (
+                <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-2xl">{activeFruit.emoji}</span>
                       <div>
-                        <span className="text-xs text-blue-400 font-semibold">{label}</span>
-                        <h4 className="text-sm font-bold text-slate-100 leading-snug mt-0.5">{meal.name}</h4>
+                        <span className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                          Buah Harian ({selectedDayName})
+                        </span>
+                        <h4 className="text-sm font-bold text-white">
+                          {activeFruit.name}
+                        </h4>
                       </div>
-                      <span className="text-lg shrink-0">{meal.emoji}</span>
                     </div>
+                    <span
+                      className={`rounded-md px-2 py-0.5 text-xs font-semibold ${
+                        skipFruit
+                          ? 'border border-amber-500/20 bg-amber-500/10 text-amber-400'
+                          : 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+                      }`}
+                    >
+                      {skipFruit ? 'Kalori Dialihkan' : 'Jatah Aktif'}
+                    </span>
+                  </div>
 
-                    <p className="text-xs text-slate-500 line-clamp-1">{meal.shortDesc}</p>
-
-                    {/* Takaran URT Langsung di Kartu */}
-                    {(meal.scaledHouseholdPortion || meal.householdPortion) && (
-                      <div className="p-2 rounded-lg bg-slate-950 border border-slate-800/80 text-xs text-slate-300">
-                        <span className="text-emerald-400 font-semibold mr-1">🥄 URT:</span>
-                        <span>{meal.scaledHouseholdPortion || meal.householdPortion}</span>
-                      </div>
-                    )}
-
-                    {/* Badge Pengalihan Kalori Buah pada Kartu Jajan */}
-                    {key === 'snack' && skipFruit && (
-                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold">
-                        <span>✨</span>
-                        <span>+Kalori dialihkan dari jatah buah (+{activeFruit.calories} kkal)</span>
-                      </div>
-                    )}
-
-                    {/* Portion Note */}
-                    {meal.portionNote && meal.portionNote !== 'Porsi standar (sesuai resep asli)' && (
-                      <p className="text-xs font-semibold text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">
-                        📏 {meal.portionNote}
-                      </p>
-                    )}
-
-                    <div className="flex items-center gap-3 text-xs font-mono text-slate-400 flex-wrap">
-                      <span>🔥 <strong className="text-white">{meal.calories}</strong> kkal</span>
-                      <span>P: <strong className="text-blue-400">{meal.protein}g</strong></span>
-                      <span>K: <strong className="text-emerald-400">{meal.carbs}g</strong></span>
-                      <span>L: <strong className="text-amber-400">{meal.fat}g</strong></span>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-2.5">
+                      <span className="block text-slate-500">Takaran URT</span>
+                      <span className="font-semibold text-slate-200">
+                        {activeFruit.householdPortion}
+                      </span>
+                    </div>
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-2.5">
+                      <span className="block text-slate-500">Nilai Kalori</span>
+                      <span className="font-mono font-bold text-emerald-400">
+                        <RollingNumber value={activeFruit.calories} /> kkal
+                      </span>
+                      <span className="ml-1 text-xs text-slate-400">
+                        ({activeFruit.carbs}g karbo)
+                      </span>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
 
-            {/* Daily Total */}
-            {dayMeals && (
-              <div className="rounded-xl bg-slate-950 border border-slate-800 p-3 text-xs font-mono text-center">
-                <span className="text-slate-400">Total Hari Ini: </span>
-                <strong className="text-white">
-                  {dayMeals.breakfast.calories + dayMeals.lunch.calories + dayMeals.snack.calories + dayMeals.dinner.calories} kkal
-                </strong>
-                <span className="text-slate-600 mx-2">|</span>
-                <span className="text-blue-400">
-                  P: {dayMeals.breakfast.protein + dayMeals.lunch.protein + dayMeals.snack.protein + dayMeals.dinner.protein}g
-                </span>
-                <span className="text-slate-600 mx-2">|</span>
-                <span className="text-emerald-400">
-                  K: {dayMeals.breakfast.carbs + dayMeals.lunch.carbs + dayMeals.snack.carbs + dayMeals.dinner.carbs}g
-                </span>
-              </div>
-            )}
-          </div>
-        )}
+                  <p className="text-xs leading-snug text-slate-400">
+                    💡 {activeFruit.benefits}
+                  </p>
+
+                  {/* Tombol Toggle Skip Fruit */}
+                  <button
+                    type="button"
+                    onClick={handleToggleSkipFruit}
+                    className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border text-xs font-bold transition active:scale-95 ${
+                      skipFruit
+                        ? 'border-emerald-500/40 bg-slate-950 text-emerald-400 hover:bg-slate-800'
+                        : 'border-amber-500/40 bg-slate-950 text-amber-400 hover:bg-slate-800'
+                    }`}
+                  >
+                    {skipFruit ? (
+                      <>
+                        <RefreshCw size={15} strokeWidth={2.3} />
+                        <span>Aktifkan Kembali Buah</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={15} strokeWidth={2.3} />
+                        <span>Lewati Buah &amp; Alihkan Kalori ke Jajan</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* 4 Meal Cards */}
+              {dayMeals && (
+                <div className="space-y-3">
+                  {[
+                    { key: 'breakfast', label: '🌅 Sarapan', meal: dayMeals.breakfast },
+                    { key: 'lunch', label: '☀️ Makan Siang', meal: dayMeals.lunch },
+                    { key: 'snack', label: '🥟 Jajan', meal: dayMeals.snack },
+                    { key: 'dinner', label: '🌙 Makan Malam', meal: dayMeals.dinner },
+                  ].map(({ key, label, meal }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className="w-full space-y-2.5 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-left transition hover:border-slate-700 active:scale-[0.995]"
+                      onClick={() => setSelectedFoodForModal(meal)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="text-xs font-semibold text-blue-400">
+                            {label}
+                          </span>
+                          <h4 className="mt-0.5 text-sm font-bold leading-snug text-slate-100">
+                            {meal.name}
+                          </h4>
+                        </div>
+                        <span className="shrink-0 text-lg">{meal.emoji}</span>
+                      </div>
+
+                      <p className="line-clamp-1 text-xs text-slate-500">
+                        {meal.shortDesc}
+                      </p>
+
+                      {(meal.scaledHouseholdPortion ||
+                        meal.householdPortion) && (
+                        <div className="rounded-lg border border-slate-800/80 bg-slate-950 p-2 text-xs text-slate-300">
+                          <span className="mr-1 font-semibold text-emerald-400">
+                            🥄 URT:
+                          </span>
+                          <span>
+                            {meal.scaledHouseholdPortion ||
+                              meal.householdPortion}
+                          </span>
+                        </div>
+                      )}
+
+                      {key === 'snack' && skipFruit ? (
+                        <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold text-amber-400">
+                          <span>✨</span>
+                          <span>
+                            +Kalori dialihkan dari jatah buah (+
+                            {activeFruit.calories} kkal)
+                          </span>
+                        </div>
+                      ) : null}
+
+                      {meal.portionNote &&
+                        meal.portionNote !==
+                          'Porsi standar (sesuai resep asli)' && (
+                          <p className="rounded border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-400">
+                            📏 {meal.portionNote}
+                          </p>
+                        )}
+
+                      <div className="flex flex-wrap items-center gap-3 font-mono text-xs text-slate-400">
+                        <span>
+                          🔥{' '}
+                          <strong className="text-white">
+                            <RollingNumber value={meal.calories} />
+                          </strong>{' '}
+                          kkal
+                        </span>
+                        <span>
+                          P:{' '}
+                          <strong className="text-blue-400">
+                            {meal.protein}g
+                          </strong>
+                        </span>
+                        <span>
+                          K:{' '}
+                          <strong className="text-emerald-400">
+                            {meal.carbs}g
+                          </strong>
+                        </span>
+                        <span>
+                          L:{' '}
+                          <strong className="text-amber-400">
+                            {meal.fat}g
+                          </strong>
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Daily Total */}
+              {dayTotals && (
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3 text-center font-mono text-xs">
+                  <span className="text-slate-400">Total Hari Ini: </span>
+                  <strong className="text-white">
+                    <RollingNumber value={dayTotals.calories} /> kkal
+                  </strong>
+                  <span className="mx-2 text-slate-600">|</span>
+                  <span className="text-blue-400">
+                    P: <RollingNumber value={dayTotals.protein} />g
+                  </span>
+                  <span className="mx-2 text-slate-600">|</span>
+                  <span className="text-emerald-400">
+                    K: <RollingNumber value={dayTotals.carbs} />g
+                  </span>
+                  <span className="mx-2 text-slate-600">|</span>
+                  <span className="text-amber-400">
+                    L: <RollingNumber value={dayTotals.fat} />g
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </motion.div>
       </main>
 
       {/* ==================== BOTTOM NAVIGATION ==================== */}
-      <nav className="fixed bottom-0 inset-x-0 z-40 bg-slate-950/95 backdrop-blur border-t border-slate-800">
-        <div className="max-w-lg mx-auto flex">
-          {[
-            { id: 'home', label: 'Beranda', emoji: '🏠' },
-            { id: 'workout', label: 'Olahraga', emoji: '🏋️' },
-            { id: 'meals', label: 'Makanan', emoji: '🍽️' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 min-h-14 flex flex-col items-center justify-center gap-0.5 transition ${
-                activeTab === tab.id ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              <span className="text-lg">{tab.emoji}</span>
-              <span className="text-xs font-semibold">{tab.label}</span>
-            </button>
-          ))}
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-800/80 bg-slate-950/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
+        <div className="mx-auto flex max-w-lg">
+          {NAV_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                aria-current={isActive ? 'page' : undefined}
+                className={`relative flex min-h-14 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
+                  isActive
+                    ? 'text-blue-400'
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                {isActive ? (
+                  <motion.span
+                    layoutId="bottom-nav-active"
+                    className="absolute inset-x-2 inset-y-1.5 rounded-2xl border border-blue-500/25 bg-blue-600/15"
+                    transition={motionTokens.spring.morph}
+                  />
+                ) : null}
+                <Icon
+                  size={19}
+                  strokeWidth={2.2}
+                  className="relative z-10"
+                />
+                <span className="relative z-10 text-xs font-semibold">
+                  {tab.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </nav>
 

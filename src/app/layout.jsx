@@ -13,14 +13,14 @@ const geistMono = Geist_Mono({
 
 export const viewport = {
   themeColor: '#020617',
+  colorScheme: 'dark',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  viewportFit: 'cover',
 };
 
 export const metadata = {
-  title: "HealthEngine — Kalkulator Kesehatan & Kebugaran Indonesia",
+  title: "HealthEngine V3 — Kalkulator Kesehatan & Kebugaran Indonesia",
   description: "Kalkulator interaktif BMI, antropometri Indonesia, edukasi kalori, pola makan anak kos & standar, serta program latihan mingguan.",
   appleWebApp: {
     capable: true,

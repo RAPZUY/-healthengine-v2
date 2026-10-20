@@ -16,6 +16,7 @@ export default function InstallPwaBanner() {
       window.navigator.standalone === true;
 
     if (isStandaloneMode) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- display-mode is only readable on the client after hydration
       setIsStandalone(true);
       return;
     }
