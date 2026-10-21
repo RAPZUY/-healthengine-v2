@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 // Pemetaan label otot Bahasa Indonesia yang konsisten
 export const MUSCLE_LABELS = {
@@ -206,12 +206,13 @@ function getLabelPosition(muscleId, view) {
 }
 
 export function BodySVG({ title, muscles, primaryMuscles, secondaryMuscles, view }) {
+  const markerId = `arrow-${useId().replace(/:/g, '')}-${view}`;
   return (
     <div className="min-w-0 flex-1">
       <p className="mb-2 text-center text-xs font-semibold text-slate-400">{title}</p>
       <svg viewBox="0 0 200 295" className="h-auto w-full" role="img" aria-label={`Peta otot ${title}`}>
         <defs>
-          <marker id={`arrow-${view}`} markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
+          <marker id={markerId} markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
             <polygon points="0 0, 6 2, 0 4" fill="#94a3b8" />
           </marker>
         </defs>
@@ -265,7 +266,7 @@ export function BodySVG({ title, muscles, primaryMuscles, secondaryMuscles, view
                 y2={pos.to.y}
                 stroke="#f43f5e"
                 strokeWidth="0.9"
-                markerEnd={`url(#arrow-${view})`}
+                markerEnd={`url(#${markerId})`}
                 strokeDasharray="2 2"
               />
               <text

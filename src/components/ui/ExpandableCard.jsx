@@ -92,7 +92,7 @@ export default function ExpandableCard({
           aria-expanded={expanded}
           aria-controls={panelId}
           aria-label={`${expanded ? collapseLabel : expandLabel}`}
-          className="flex min-h-11 flex-1 touch-manipulation items-start gap-3 px-5 py-4 text-left focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-500"
+          className="flex min-h-11 flex-1 touch-manipulation items-start gap-3 px-5 py-4 text-left focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-500 sm:px-6 sm:py-5"
         >
           <span className="min-w-0 flex-1">{header}</span>
           <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-700/70 bg-slate-950/60 text-slate-400">
@@ -111,7 +111,7 @@ export default function ExpandableCard({
         </button>
 
         {headerAction ? (
-          <div className="flex shrink-0 items-start py-3 pr-4">{headerAction}</div>
+          <div className="flex shrink-0 items-start py-3 pr-4 sm:py-4 sm:pr-5">{headerAction}</div>
         ) : null}
       </div>
 
@@ -124,7 +124,7 @@ export default function ExpandableCard({
       >
         <div
           ref={contentRef}
-          className={`px-5 pb-5 ${contentClassName}`}
+          className={`px-5 pb-5 sm:px-6 sm:pb-6 ${contentClassName}`}
         >
           {children}
         </div>

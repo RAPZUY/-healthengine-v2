@@ -931,7 +931,7 @@ function HealthEngine() {
                   {/* Exercise Slots — kartu lipat inline, bukan modal */}
                   {!currentDayData.isRestDay &&
                     currentDayData.slots.length > 0 && (
-                      <div className="space-y-4">
+                      <div className="space-y-5">
                         {currentDayData.slots.map((slot, slotIndex) => {
                           const { variation, availableCount, currentIndex } =
                             getActiveVariation(
@@ -1303,7 +1303,7 @@ function HealthEngine() {
 
               {/* 4 Meal Cards — lipatan inline, bukan pop-up */}
               {dayMeals && (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {[
                     { key: 'breakfast', label: '🌅 Sarapan', meal: dayMeals.breakfast },
                     { key: 'lunch', label: '☀️ Makan Siang', meal: dayMeals.lunch },
@@ -1358,7 +1358,7 @@ function HealthEngine() {
                         </>
                       }
                     >
-                      <div className="space-y-4 pt-1">
+                      <div className="space-y-5 pt-1">
                         <p className="text-xs leading-relaxed text-slate-400">
                           {meal.shortDesc}
                         </p>

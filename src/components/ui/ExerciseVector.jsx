@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { createContext, useContext, useId } from 'react';
 
 /* -------------------------------------------------------------------------- */
 /* Drawing primitives                                                         */
@@ -13,6 +13,10 @@ const PHASE_1 = '#38bdf8';
 const PHASE_2 = '#34d399';
 const HIGHLIGHT = '#f43f5e';
 const FLOOR = '#334155';
+
+// Each inline SVG gets unique marker IDs so multiple expanded cards never
+// collide in the document.
+const MarkerContext = createContext('');
 
 function Bone({ d, color = BONE, width = 3.8, dash }) {
   return (
@@ -51,6 +55,7 @@ function Tension({ x, y, r = 4.2, color = HIGHLIGHT }) {
 }
 
 function Arrow({ x1, y1, x2, y2, color = PHASE_2, markerId, dash }) {
+  const markerPrefix = useContext(MarkerContext);
   return (
     <line
       x1={x1}
@@ -61,7 +66,7 @@ function Arrow({ x1, y1, x2, y2, color = PHASE_2, markerId, dash }) {
       strokeWidth="2"
       strokeLinecap="round"
       strokeDasharray={dash}
-      markerEnd={markerId ? `url(#${markerId})` : undefined}
+      markerEnd={markerId ? `url(#${markerPrefix}${markerId})` : undefined}
     />
   );
 }
@@ -713,30 +718,49 @@ const POSE_RENDERERS = {
     </g>
   ),
 
-  band_fly: (phase) => (
-    <g>
-      <Head cx="80" cy="18" phase={phase} />
-      <Bone d="M80 25 L80 48" width={4} />
-      <Bone d="M80 48 L66 66 L62 82" color={MUTED} />
-      <Bone d="M80 48 L94 66 L98 82" color={MUTED} />
-      {phase === 1 ? (
-        <>
-          <Bone d="M72 31 L54 36" color={PHASE_1} width={3} />
-          <Bone d="M88 31 L106 36" color={PHASE_1} width={3} />
-          <line x1="54" y1="36" x2="106" y2="36" stroke="#fbbf24" strokeWidth="1.4" strokeDasharray="3 2" />
-          <Note x="80" y="12" text="Regang dada" color={PHASE_1} size={6.2} />
-        </>
-      ) : (
-        <>
-          <Bone d="M72 31 L68 40 L74 38" color={PHASE_2} width={3} />
-          <Bone d="M88 31 L92 40 L86 38" color={PHASE_2} width={3} />
-          <line x1="74" y1="38" x2="86" y2="38" stroke="#fbbf24" strokeWidth="1.4" strokeDasharray="3 2" />
-          <Tension x="80" y="36" color={PHASE_2} />
-          <Note x="80" y="12" text="Remas dada" color={PHASE_2} size={6.2} />
-        </>
-      )}
-    </g>
-  ),
+  band_fly: (phase, variant) => {
+    const lowHigh = variant === 'low_high';
+    return (
+      <g>
+        <Head cx="80" cy="18" phase={phase} />
+        <Bone d="M80 25 L80 48" width={4} />
+        <Bone d="M80 48 L66 66 L62 82" color={MUTED} />
+        <Bone d="M80 48 L94 66 L98 82" color={MUTED} />
+        {phase === 1 ? (
+          <>
+            <Bone d={lowHigh ? 'M72 31 L54 48' : 'M72 31 L54 36'} color={PHASE_1} width={3} />
+            <Bone d={lowHigh ? 'M88 31 L106 48' : 'M88 31 L106 36'} color={PHASE_1} width={3} />
+            <line
+              x1="54"
+              y1={lowHigh ? 48 : 36}
+              x2="106"
+              y2={lowHigh ? 48 : 36}
+              stroke="#fbbf24"
+              strokeWidth="1.4"
+              strokeDasharray="3 2"
+            />
+            <Note x="80" y="12" text={lowHigh ? 'Tangan mulai rendah' : 'Regang dada'} color={PHASE_1} size={6.2} />
+          </>
+        ) : (
+          <>
+            <Bone d={lowHigh ? 'M72 31 L74 25 L79 28' : 'M72 31 L68 40 L74 38'} color={PHASE_2} width={3} />
+            <Bone d={lowHigh ? 'M88 31 L86 25 L81 28' : 'M88 31 L92 40 L86 38'} color={PHASE_2} width={3} />
+            <line
+              x1={lowHigh ? 79 : 74}
+              y1={lowHigh ? 28 : 38}
+              x2={lowHigh ? 81 : 86}
+              y2={lowHigh ? 28 : 38}
+              stroke="#fbbf24"
+              strokeWidth="1.4"
+              strokeDasharray="3 2"
+            />
+            <Tension x="80" y={lowHigh ? 28 : 36} color={PHASE_2} />
+            <Note x="80" y="12" text={lowHigh ? 'Dorong diagonal ke atas' : 'Remas dada'} color={PHASE_2} size={6.2} />
+          </>
+        )}
+      </g>
+    );
+  },
 
   /* ----------------------------- CORE FAMILY ----------------------------- */
   plank: (phase) => (
@@ -1905,7 +1929,7 @@ const POSE_RULES = [
   [/pull-through/, 'pull_through'],
   [/pull-?up|chin-?up/, 'pullup', (t) => (t.includes('chin') ? 'chinup' : undefined)],
   [/shoulder press|overhead press/, 'shoulder_press'],
-  [/chest fly|band fly/, 'band_fly'],
+  [/chest fly|band fly/, 'band_fly', (t) => (t.includes('low-to-high') ? 'low_high' : undefined)],
   [/romanian deadlift/, 'hinge'],
   [/lateral walk/, 'lateral_walk'],
   [/woodchop/, 'woodchop'],
@@ -1973,32 +1997,35 @@ export function getExercisePose(name = '', category = 'horizontal_push') {
 
 export function PhaseVector({ pose, variant, phase, className = '' }) {
   const renderer = POSE_RENDERERS[pose] ?? POSE_RENDERERS.pushup;
+  const markerPrefix = `m${useId().replace(/:/g, '')}-`;
 
   return (
-    <svg
-      viewBox="0 0 160 92"
-      className={`h-auto w-full select-none ${className}`}
-      role="img"
-      aria-label={`Vektor fase ${phase} — ${POSE_META[pose]?.label ?? 'gerakan'}`}
-    >
-      <defs>
-        {['arrow-up', 'arrow-down', 'arrow-left', 'arrow-right'].map((id) => (
-          <marker
-            key={id}
-            id={id}
-            markerWidth="6"
-            markerHeight="6"
-            refX="5"
-            refY="3"
-            orient="auto"
-          >
-            <path d="M0,0 L6,3 L0,6 Z" fill="context-stroke" />
-          </marker>
-        ))}
-      </defs>
-      <Ground />
-      {renderer(phase, variant)}
-    </svg>
+    <MarkerContext.Provider value={markerPrefix}>
+      <svg
+        viewBox="0 0 160 92"
+        className={`h-auto w-full select-none ${className}`}
+        role="img"
+        aria-label={`Vektor fase ${phase} — ${POSE_META[pose]?.label ?? 'gerakan'}`}
+      >
+        <defs>
+          {['arrow-up', 'arrow-down', 'arrow-left', 'arrow-right'].map((id) => (
+            <marker
+              key={id}
+              id={`${markerPrefix}${id}`}
+              markerWidth="6"
+              markerHeight="6"
+              refX="5"
+              refY="3"
+              orient="auto"
+            >
+              <path d="M0,0 L6,3 L0,6 Z" fill="context-stroke" />
+            </marker>
+          ))}
+        </defs>
+        <Ground />
+        {renderer(phase, variant)}
+      </svg>
+    </MarkerContext.Provider>
   );
 }
 
