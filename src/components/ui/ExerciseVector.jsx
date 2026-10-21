@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useId } from 'react';
+import React from 'react';
 
 /* -------------------------------------------------------------------------- */
 /* Drawing primitives                                                         */
@@ -299,17 +299,17 @@ const POSE_RENDERERS = {
     if (phase === 1) {
       return (
         <g>
-          <Head cx="34" cy="70" phase={1} />
-          <Bone d="M41 73 L76 74" width={4} />
-          <Bone d="M43 75 L30 79" color={MUTED} width={3} />
-          <Bone d="M76 74 L94 52 L106 78" color={LIMB} />
-          <Bone d="M106 78 L112 78" color={MUTED} width={3} />
+          <Head cx="34" cy="73" phase={1} />
+          <Bone d="M41 76 L76 77" width={4} />
+          <Bone d="M43 77 L30 80" color={MUTED} width={3} />
+          <Bone d="M76 77 L94 52 L106 80" color={LIMB} />
+          <Bone d="M106 80 L112 80" color={MUTED} width={3} />
           {single ? (
-            <Bone d="M76 76 L98 74 L112 78" color={MUTED} />
+            <Bone d="M76 78 L98 74 L112 80" color={MUTED} />
           ) : (
-            <Bone d="M76 76 L96 54 L108 80" color={MUTED} />
+            <Bone d="M76 78 L96 54 L108 80" color={MUTED} />
           )}
-          <Tension x="76" y="72" />
+          <Tension x="76" y="75" />
           <Note x="80" y="34" text="Bokong menyentuh lantai" color={PHASE_1} />
           <Arrow x1="120" y1="50" x2="120" y2="68" color={PHASE_1} markerId="arrow-down" />
         </g>
@@ -317,17 +317,17 @@ const POSE_RENDERERS = {
     }
     return (
       <g>
-        <Head cx="34" cy="70" phase={2} />
-        <Bone d="M41 72 L76 58" width={4} />
-        <Bone d="M43 74 L30 79" color={MUTED} width={3} />
+        <Head cx="34" cy="73" phase={2} />
+        <Bone d="M41 75 L76 58" width={4} />
+        <Bone d="M43 76 L30 80" color={MUTED} width={3} />
         <Bone d="M76 58 L94 50 L106 78" color={LIMB} />
-        <Bone d="M106 78 L112 78" color={MUTED} width={3} />
+        <Bone d="M106 78 L112 80" color={MUTED} width={3} />
         {single ? (
           <Bone d="M76 58 L100 60 L114 64" color={MUTED} />
         ) : (
           <Bone d="M76 60 L96 52 L108 80" color={MUTED} />
         )}
-        <Bone d="M34 70 L28 72" color={MUTED} width={3} />
+        <Bone d="M34 73 L28 74" color={MUTED} width={3} />
         <Tension x="72" y="64" color={PHASE_2} />
         <Note x="82" y="30" text="Bahu–pinggul–lutut satu garis" color={PHASE_2} size={6.2} />
         <Arrow x1="121" y1="66" x2="121" y2="42" color={PHASE_2} markerId="arrow-up" />
@@ -967,15 +967,56 @@ const POSE_RENDERERS = {
     }
 
     const ytw = variant === 'ytw';
+    const snowAngel = variant === 'snow_angel';
     return (
       <g>
         <Head cx="34" cy={phase === 1 ? 68 : 60} phase={phase} />
         <Bone d={phase === 1 ? 'M42 72 L78 74' : 'M42 66 L78 68'} width={4} />
-        <Bone d={phase === 1 ? 'M42 70 L22 64' : 'M42 64 L20 54'} color={phase === 1 ? PHASE_1 : PHASE_2} width={3} />
+        <Bone
+          d={
+            snowAngel
+              ? phase === 1
+                ? 'M42 70 L24 56'
+                : 'M42 64 L22 74'
+              : phase === 1
+                ? 'M42 70 L22 64'
+                : 'M42 64 L20 54'
+          }
+          color={phase === 1 ? PHASE_1 : PHASE_2}
+          width={3}
+        />
         <Bone d={phase === 1 ? 'M78 74 L102 76' : 'M78 68 L102 66'} color={MUTED} />
         <Bone d={phase === 1 ? 'M78 72 L96 72' : 'M78 66 L98 60'} color={MUTED} width={2.6} />
         <Tension x="64" y={phase === 1 ? 72 : 66} color={phase === 1 ? HIGHLIGHT : PHASE_2} />
-        <Note x="104" y="46" text={ytw ? (phase === 1 ? 'Bentuk Y' : 'Bentuk T / W') : phase === 1 ? 'Tengkurap rata' : 'Angkat dada & kaki'} color={phase === 1 ? PHASE_1 : PHASE_2} anchor="end" size={6.2} />
+        <Note
+          x="104"
+          y="46"
+          text={
+            snowAngel
+              ? phase === 1
+                ? 'Lengan overhead'
+                : 'Sapu lengan ke samping'
+              : ytw
+                ? phase === 1
+                  ? 'Bentuk Y'
+                  : 'Bentuk T / W'
+                : phase === 1
+                  ? 'Tengkurap rata'
+                  : 'Angkat dada & kaki'
+          }
+          color={phase === 1 ? PHASE_1 : PHASE_2}
+          anchor="end"
+          size={6.2}
+        />
+        {snowAngel && phase === 2 ? (
+          <path
+            d="M22 54 Q8 64 24 76"
+            fill="none"
+            stroke={PHASE_2}
+            strokeWidth="1.4"
+            strokeDasharray="3 2"
+          />
+        ) : null}
         {phase === 2 ? <Arrow x1="110" y1="62" x2="110" y2="46" color={PHASE_2} markerId="arrow-up" /> : null}
       </g>
     );
@@ -1084,7 +1125,7 @@ const POSE_RENDERERS = {
     </g>
   ),
 
-  jumping_jack: (phase) => (
+  squat_jack: (phase) => (
     <g>
       <Head cx="80" cy="18" phase={phase} />
       <Bone d={phase === 1 ? 'M80 26 L80 48' : 'M80 24 L80 46'} width={4} />
@@ -1700,7 +1741,7 @@ const POSE_META = {
     c1: 'Mendarat di satu kaki dengan lutut tertekuk, kaki lain terentang ke samping.',
     c2: 'Dorong lateral dan lompat ke sisi lain, mendarat dengan lutut menyerap benturan.',
   },
-  jumping_jack: {
+  squat_jack: {
     label: 'Squat Jack — Squat → Buka & Lompat',
     c1: 'Setengah squat dengan lutut tertekuk dan lengan di samping badan.',
     c2: 'Lompat membuka kaki dan angkat lengan ke atas, lalu kembali ke squat.',
@@ -1838,7 +1879,7 @@ function pickTricepsVariant(text) {
 const POSE_RULES = [
   [/glute bridge/, 'glute_bridge', (t) => (t.includes('single') ? 'single' : undefined)],
   [/jump squat/, 'jump_squat'],
-  [/squat jack/, 'jumping_jack'],
+  [/squat jack/, 'squat_jack'],
   [/bulgarian|split squat/, 'lunge', () => 'bulgarian'],
   [/lunge/, 'lunge', pickLungeVariant],
   [/step-up/, 'step_up'],
@@ -1882,11 +1923,12 @@ const POSE_RULES = [
   [/sit-?up/, 'situp'],
   [/superman/, 'prone_raise', () => 'superman'],
   [/cobra/, 'prone_raise', () => 'cobra'],
-  [/prone y|snow angel/, 'prone_raise', () => 'ytw'],
+  [/prone y/, 'prone_raise', () => 'ytw'],
+  [/snow angel/, 'prone_raise', () => 'snow_angel'],
   [/skipping|double-under/, 'skipping', (t) => (t.includes('double') ? 'double' : undefined)],
   [/burpee/, 'burpee'],
   [/skater/, 'skater'],
-  [/squat jack/, 'jumping_jack'],
+  [/squat jack/, 'squat_jack'],
   [/high knees/, 'high_knees'],
 ];
 

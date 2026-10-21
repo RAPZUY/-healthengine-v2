@@ -132,7 +132,7 @@ export function RollingNumber({
           return (
             <span
               key={`digit-slot-${index}`}
-              className={`relative inline-flex w-[0.62em] items-baseline justify-center align-baseline leading-none ${digitClassName}`}
+              className={`relative inline-flex w-[0.62em] items-baseline justify-center align-baseline tabular-nums leading-none ${digitClassName}`}
             >
               {/* Invisible glyph keeps the slot's baseline tied to the real font
                   metrics. The clipping layer is absolute so the slot itself never

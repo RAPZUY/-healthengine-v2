@@ -350,11 +350,12 @@ export function calculateWorkoutStreak(completedDates = [], restDayNumbers = [0,
 
 // 10. Mengalikan makronutrien makanan sesuai target kalori pengguna
 const SPOON_UNITS = new Set(['sdm', 'sdt']);
+const WHOLE_UNITS = new Set(['g', 'ml']);
 
 /**
  * Membulatkan takaran URT agar terasa manusiawi:
  * - sendok (sdm/sdt) -> bilangan bulat, minimal 1
- * - gram -> bilangan bulat, minimal 1 (nilai gizi tetap dari rasio asli)
+ * - gram / mililiter -> bilangan bulat, minimal 1 (nilai gizi tetap dari rasio asli)
  * - satuan rumah tangga lain -> kelipatan 0,5 terdekat, minimal 0,5
  */
 function roundHouseholdAmount(amount, unit) {
@@ -364,7 +365,7 @@ function roundHouseholdAmount(amount, unit) {
     return Math.max(1, Math.round(amount));
   }
 
-  if (normalizedUnit === 'g') {
+  if (WHOLE_UNITS.has(normalizedUnit)) {
     return Math.max(1, Math.round(amount));
   }
 
@@ -397,7 +398,7 @@ export function scaleMealToTarget(meal, dailyTargetCalories, baseDailyCalories) 
   let scaledHouseholdPortion = meal.householdPortion || '';
   if (meal.householdPortion && Math.abs(ratio - 1) >= 0.05) {
     scaledHouseholdPortion = meal.householdPortion.replace(
-      /(\d+(?:[.,]\d+)?)\s*(centong|potong|sdm|sdt|butir|lembar|buah|mangkok|gelas|ekor|kaleng|biji|bungkus|genggam|batang|ruas|juring|papan|iris|g\b)/gi,
+      /(\d+(?:[.,]\d+)?)\s*(centong|potong|sdm|sdt|butir|lembar|buah|mangkok|gelas|ekor|kaleng|biji|bungkus|genggam|batang|ruas|juring|papan|iris|tangkup|porsi|ml|g\b)/gi,
       (match, rawAmount, unit) => {
         const originalAmount = parseFloat(String(rawAmount).replace(',', '.'));
         if (!Number.isFinite(originalAmount)) return match;
