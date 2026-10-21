@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "modelrouter": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "ModelRouter",
+      "options": {
+        "baseURL": "https://modelrouter.id/v1"
+      },
+      "models": {
+        "deepseek-chat": {
+          "name": "DeepSeek V3 (ModelRouter)"
+        }
+      }
+    }
+  }
+}

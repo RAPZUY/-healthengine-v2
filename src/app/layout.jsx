@@ -20,7 +20,7 @@ export const viewport = {
 };
 
 export const metadata = {
-  title: "HealthEngine V3 — Kalkulator Kesehatan & Kebugaran Indonesia",
+  title: "HealthEngine V3.1 — Kalkulator Kesehatan & Kebugaran Indonesia",
   description: "Kalkulator interaktif BMI, antropometri Indonesia, edukasi kalori, pola makan anak kos & standar, serta program latihan mingguan.",
   appleWebApp: {
     capable: true,

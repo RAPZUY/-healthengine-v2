@@ -1,0 +1,134 @@
+'use client';
+
+import React, { useEffect, useId, useRef, useState } from 'react';
+import { animate, motion, useMotionValue, useReducedMotion } from 'motion/react';
+import { ChevronDown } from 'lucide-react';
+import { motionTokens } from '@/components/ui/motion-primitives';
+
+/**
+ * Kartu dengan lipatan inline (bukan modal). Header selalu terlihat, panel
+ * konten memuai dengan tinggi terukur + kurva ease-out yang singkat supaya
+ * terasa seperti kartu yang dibuka, bukan halaman yang melompat.
+ *
+ * Catatan aksesibilitas: trigger utama adalah <button>, dan `headerAction`
+ * dirender sebagai elemen saudara (bukan di dalam button) agar tombol aksi
+ * seperti Swap tidak menghasilkan nested button.
+ */
+export default function ExpandableCard({
+  header,
+  children,
+  headerAction,
+  defaultExpanded = false,
+  className = '',
+  headerClassName = '',
+  contentClassName = '',
+  expandLabel = 'Buka detail',
+  collapseLabel = 'Tutup detail',
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const reduce = useReducedMotion();
+  const contentRef = useRef(null);
+  const measuredHeight = useRef(0);
+  const height = useMotionValue(0);
+  const panelId = useId();
+
+  // Ukur tinggi natural konten dan ikuti perubahan ukuran (mis. teks membungkus
+  // ulang saat viewport berubah) tanpa mengunci tinggi ke nilai lama.
+  useEffect(() => {
+    const element = contentRef.current;
+    if (!element) return undefined;
+
+    const syncHeight = () => {
+      measuredHeight.current = element.getBoundingClientRect().height;
+      if (expanded) {
+        if (reduce) {
+          height.set(measuredHeight.current);
+        } else {
+          animate(height, measuredHeight.current, {
+            duration: motionTokens.duration.standard,
+            ease: motionTokens.ease.standard,
+          });
+        }
+      }
+    };
+
+    syncHeight();
+
+    let observer;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(syncHeight);
+      observer.observe(element);
+    }
+    window.addEventListener('resize', syncHeight);
+
+    return () => {
+      if (observer) observer.disconnect();
+      window.removeEventListener('resize', syncHeight);
+    };
+  }, [expanded, height, reduce]);
+
+  useEffect(() => {
+    if (reduce) {
+      height.set(expanded ? measuredHeight.current : 0);
+      return undefined;
+    }
+
+    const controls = animate(height, expanded ? measuredHeight.current : 0, {
+      duration: motionTokens.duration.standard,
+      ease: motionTokens.ease.standard,
+    });
+
+    return () => controls.stop();
+  }, [expanded, height, reduce]);
+
+  return (
+    <div
+      className={`overflow-hidden rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/90 via-slate-900/75 to-slate-950/95 shadow-[inset_0_1px_0_0_rgba(148,163,184,0.07),0_20px_45px_-32px_rgba(0,0,0,0.95)] transition-colors duration-200 hover:border-slate-700/80 ${className}`}
+    >
+      <div className={`flex items-stretch ${headerClassName}`}>
+        <button
+          type="button"
+          onClick={() => setExpanded((previous) => !previous)}
+          aria-expanded={expanded}
+          aria-controls={panelId}
+          aria-label={`${expanded ? collapseLabel : expandLabel}`}
+          className="flex min-h-11 flex-1 touch-manipulation items-start gap-3 px-5 py-4 text-left focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-500"
+        >
+          <span className="min-w-0 flex-1">{header}</span>
+          <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-700/70 bg-slate-950/60 text-slate-400">
+            <motion.span
+              animate={{ rotate: expanded ? 180 : 0 }}
+              transition={
+                reduce
+                  ? { duration: 0 }
+                  : { duration: motionTokens.duration.fast, ease: motionTokens.ease.standard }
+              }
+              className="flex items-center justify-center"
+            >
+              <ChevronDown size={15} strokeWidth={2.4} aria-hidden="true" />
+            </motion.span>
+          </span>
+        </button>
+
+        {headerAction ? (
+          <div className="flex shrink-0 items-start py-3 pr-4">{headerAction}</div>
+        ) : null}
+      </div>
+
+      <motion.div
+        id={panelId}
+        style={{ height }}
+        aria-hidden={!expanded}
+        inert={!expanded ? true : undefined}
+        className="overflow-hidden"
+      >
+        <div
+          ref={contentRef}
+          className={`px-5 pb-5 ${contentClassName}`}
+        >
+          {children}
+        </div>
+      </motion.div>
+    </div>
+  );
+}

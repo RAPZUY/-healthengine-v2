@@ -105,16 +105,24 @@ export function RollingNumber({
   const characters = Array.from(formatted);
 
   return (
-    <span className={`inline-flex items-baseline tabular-nums ${className}`}>
+    <span
+      className={`inline-flex items-baseline gap-[0.02em] tabular-nums leading-none ${className}`}
+    >
       <span className="sr-only">{ariaLabel ?? formatted}</span>
-      {prefix ? <span aria-hidden="true">{prefix}</span> : null}
-      <span aria-hidden="true" className="inline-flex items-baseline">
+      {prefix ? (
+        <span aria-hidden="true" className="inline-block leading-none">
+          {prefix}
+        </span>
+      ) : null}
+      <span aria-hidden="true" className="inline-flex items-baseline leading-none">
         {characters.map((character, index) => {
           if (!/\d/.test(character)) {
+            // Separators (thousand dots, decimal commas) stay in the text flow so
+            // their own baseline is the same baseline as the digits around them.
             return (
               <span
                 key={`separator-${index}-${character}`}
-                className="inline-flex h-[1.15em] items-center justify-center"
+                className="inline-block leading-none"
               >
                 {character}
               </span>
@@ -124,37 +132,47 @@ export function RollingNumber({
           return (
             <span
               key={`digit-slot-${index}`}
-              className={`relative inline-flex h-[1.15em] w-[0.62em] items-center justify-center overflow-hidden ${digitClassName}`}
+              className={`relative inline-flex w-[0.62em] items-baseline justify-center align-baseline leading-none ${digitClassName}`}
             >
-              <AnimatePresence initial={false}>
-                <motion.span
-                  key={`digit-${index}-${character}`}
-                  initial={
-                    reduce
-                      ? { opacity: 0 }
-                      : { y: direction > 0 ? '100%' : '-100%', opacity: 0.2 }
-                  }
-                  animate={reduce ? { opacity: 1 } : { y: '0%', opacity: 1 }}
-                  exit={
-                    reduce
-                      ? { opacity: 0 }
-                      : {
-                          y: direction > 0 ? '-100%' : '100%',
-                          opacity: 0.2,
-                        }
-                  }
-                  transition={motionTokens.spring.smooth}
-                  className="absolute inset-0 flex items-center justify-center"
-                >
-                  {character}
-                </motion.span>
-              </AnimatePresence>
+              {/* Invisible glyph keeps the slot's baseline tied to the real font
+                  metrics. The clipping layer is absolute so the slot itself never
+                  becomes an overflow-hidden inline-block (whose baseline would be
+                  its bottom edge). */}
+              <span className="invisible block leading-none">{character}</span>
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 top-0 h-[1em] overflow-hidden"
+              >
+                <AnimatePresence initial={false}>
+                  <motion.span
+                    key={`digit-${index}-${character}`}
+                    initial={
+                      reduce
+                        ? { opacity: 0 }
+                        : { y: direction > 0 ? '100%' : '-100%', opacity: 0.2 }
+                    }
+                    animate={reduce ? { opacity: 1 } : { y: '0%', opacity: 1 }}
+                    exit={
+                      reduce
+                        ? { opacity: 0 }
+                        : {
+                            y: direction > 0 ? '-100%' : '100%',
+                            opacity: 0.2,
+                          }
+                    }
+                    transition={motionTokens.spring.smooth}
+                    className="absolute inset-0 flex items-start justify-center leading-none"
+                  >
+                    {character}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
             </span>
           );
         })}
       </span>
       {suffix ? (
-        <span aria-hidden="true" className="ml-1">
+        <span aria-hidden="true" className="inline-block leading-none">
           {suffix}
         </span>
       ) : null}

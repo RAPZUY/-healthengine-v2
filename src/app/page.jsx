@@ -28,13 +28,13 @@ import {
 } from '@/utils/healthCalculations';
 import { WEEKLY_MEALS, BASE_DAILY_CALORIES, DAILY_FRUITS } from '@/data/nutritionData';
 import { WORKOUT_SCHEDULE, EQUIPMENT_LIST } from '@/data/workoutData';
-import MealDetailModal from '@/components/MealDetailModal';
 import BiometricModal from '@/components/BiometricModal';
-import MuscleAnatomyModal from '@/components/MuscleAnatomyModal';
 import MartialArtsSection from '@/components/MartialArtsSection';
 import WeightProgressCard from '@/components/WeightProgressCard';
 import InstallPwaBanner from '@/components/InstallPwaBanner';
 import TodoCalendar from '@/components/ui/TodoCalendar';
+import ExpandableCard from '@/components/ui/ExpandableCard';
+import ExerciseDetailPanel from '@/components/ExerciseDetailPanel';
 import { ToastProvider, useToast } from '@/components/ui/ToastProvider';
 import {
   motionTokens,
@@ -43,7 +43,12 @@ import {
 } from '@/components/ui/motion-primitives';
 
 // Versi rilis tampilan — samakan dengan CACHE_NAME di public/sw.js.
-const APP_VERSION = '3.0.4';
+const APP_VERSION = '3.1';
+
+// Permukaan kartu V3.1: gradien gelap lembut + hairline highlight di atas.
+const CARD_SURFACE =
+  'rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/90 via-slate-900/70 to-slate-950/95 shadow-[inset_0_1px_0_0_rgba(148,163,184,0.07),0_20px_45px_-32px_rgba(0,0,0,0.95)]';
+const UNIT_ROW = 'inline-flex items-baseline gap-1.5 tabular-nums';
 
 // Hari dalam seminggu
 const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
@@ -145,8 +150,6 @@ function HealthEngine() {
 
   // Modal state
   const [showBioModal, setShowBioModal] = useState(false);
-  const [selectedExercise, setSelectedExercise] = useState(null);
-  const [selectedFoodForModal, setSelectedFoodForModal] = useState(null);
 
   // ==================== PERSISTENCE ====================
   useEffect(() => {
@@ -598,9 +601,15 @@ function HealthEngine() {
 
   // ==================== RENDER ====================
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-slate-950 text-slate-100">
+    <div className="relative min-h-dvh overflow-x-hidden bg-slate-950 text-slate-100">
+      {/* Aksen cahaya lembut di latar atas — satu sumber cahaya, bukan glow di setiap kartu. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top,rgba(37,99,235,0.16),rgba(16,185,129,0.05)_38%,transparent_70%)]"
+      />
+
       {/* ==================== HEADER ==================== */}
-      <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-slate-800/70 bg-gradient-to-b from-slate-950/95 to-slate-950/75 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-3 sm:px-4">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-emerald-500 text-sm font-bold text-white shadow-lg shadow-blue-950/40">
@@ -614,7 +623,7 @@ function HealthEngine() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900/70 px-2.5 py-1.5 text-slate-300">
+          <div className="flex items-center gap-1.5 rounded-full border border-slate-800/80 bg-slate-900/60 px-2.5 py-1.5 text-slate-300">
             <span className="text-xs font-semibold">
               <MorphingText value={activeTabLabel} />
             </span>
@@ -623,7 +632,7 @@ function HealthEngine() {
       </header>
 
       {/* ==================== MAIN CONTENT ==================== */}
-      <main className="mx-auto max-w-lg px-3 pb-28 pt-3 sm:px-4 sm:pt-4">
+      <main className="relative mx-auto max-w-lg px-3 pb-28 pt-3 sm:px-4 sm:pt-4">
         <motion.div
           key={activeTab}
           initial={reduce ? { opacity: 0 } : { opacity: 0 }}
@@ -632,7 +641,7 @@ function HealthEngine() {
         >
           {/* ==================== TAB 1: BERANDA ==================== */}
           {activeTab === 'home' && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <TodoCalendar
                 selectedDate={selectedDate}
                 onSelectDate={handleSelectDate}
@@ -647,12 +656,11 @@ function HealthEngine() {
                     aria-label={`Streak latihan ${streak.streak} hari`}
                   >
                     <Flame size={14} strokeWidth={2.4} />
-                    <RollingNumber
-                      value={streak.streak}
-                      className="text-xs font-bold"
-                    />
-                    <span className="hidden text-xs font-medium text-orange-300/80 sm:inline">
-                      Hari
+                    <span className={`${UNIT_ROW} text-xs font-bold text-orange-300`}>
+                      <RollingNumber value={streak.streak} />
+                      <span className="text-[11px] font-medium text-orange-300/80">
+                        Hari
+                      </span>
                     </span>
                     {streak.hasStreakFreeze ? (
                       <span className="text-xs" aria-hidden="true">
@@ -667,8 +675,8 @@ function HealthEngine() {
               <InstallPwaBanner />
 
               {/* Biometric Profile Card */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-xl shadow-slate-950/20">
-                <div className="mb-3 flex items-center justify-between gap-2">
+              <div className={`${CARD_SURFACE} p-5 sm:p-6`}>
+                <div className="mb-4 flex items-center justify-between gap-2">
                   <h3 className="flex items-center gap-2 text-sm font-bold text-slate-100">
                     <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/10 text-blue-400">
                       <UserRound size={15} strokeWidth={2.2} />
@@ -678,82 +686,83 @@ function HealthEngine() {
                   <button
                     type="button"
                     onClick={() => setShowBioModal(true)}
-                    className="min-h-11 rounded-xl border border-slate-700 bg-slate-950 px-3 text-xs font-semibold text-slate-300 transition hover:bg-slate-800 active:scale-95"
+                    className="min-h-11 rounded-xl border border-slate-700/80 bg-slate-950/70 px-3.5 text-xs font-semibold text-slate-300 transition-colors hover:border-slate-600 hover:bg-slate-800"
                   >
                     Edit Profil
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
-                    <span className="block text-slate-500">Tinggi</span>
-                    <span className="font-mono font-bold text-white">
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="rounded-xl border border-slate-800/70 bg-slate-950/50 p-3.5">
+                    <span className="block text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                      Tinggi
+                    </span>
+                    <span className={`${UNIT_ROW} mt-1 font-mono text-lg font-bold text-white`}>
                       <RollingNumber value={bio.heightCm} />
-                      <span className="ml-1 text-slate-400">cm</span>
+                      <span className="text-xs font-medium text-slate-400">cm</span>
                     </span>
                   </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
-                    <span className="block text-slate-500">Berat</span>
-                    <span className="font-mono font-bold text-white">
-                      <RollingNumber
-                        value={bio.weightKg}
-                        maximumFractionDigits={1}
-                      />
-                      <span className="ml-1 text-slate-400">kg</span>
+                  <div className="rounded-xl border border-slate-800/70 bg-slate-950/50 p-3.5">
+                    <span className="block text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                      Berat
+                    </span>
+                    <span className={`${UNIT_ROW} mt-1 font-mono text-lg font-bold text-white`}>
+                      <RollingNumber value={bio.weightKg} maximumFractionDigits={1} />
+                      <span className="text-xs font-medium text-slate-400">kg</span>
                     </span>
                   </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
-                    <span className="block text-slate-500">Usia</span>
-                    <span className="font-mono font-bold text-white">
+                  <div className="rounded-xl border border-slate-800/70 bg-slate-950/50 p-3.5">
+                    <span className="block text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                      Usia
+                    </span>
+                    <span className={`${UNIT_ROW} mt-1 font-mono text-lg font-bold text-white`}>
                       <RollingNumber value={bio.age} />
-                      <span className="ml-1 text-slate-400">tahun</span>
+                      <span className="text-xs font-medium text-slate-400">tahun</span>
                     </span>
                   </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
-                    <span className="block text-slate-500">BMI</span>
-                    <span className="font-mono font-bold text-white">
+                  <div className="rounded-xl border border-slate-800/70 bg-slate-950/50 p-3.5">
+                    <span className="block text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                      BMI
+                    </span>
+                    <span className={`${UNIT_ROW} mt-1 font-mono text-lg font-bold text-white`}>
                       <RollingNumber value={bmi} maximumFractionDigits={1} />
-                      <span className="ml-1 text-slate-400">kg/m²</span>
+                      <span className="text-xs font-medium text-slate-400">kg/m²</span>
                     </span>
                   </div>
                 </div>
 
                 {/* BMI Badge */}
                 <div
-                  className={`mt-3 rounded-xl border px-3 py-2 text-xs font-medium ${bmiCategory.badgeClass}`}
+                  className={`mt-4 rounded-xl border px-3.5 py-2.5 text-xs font-medium leading-relaxed ${bmiCategory.badgeClass}`}
                 >
                   {bmiCategory.label} — {bmiCategory.advice}
                 </div>
 
                 {/* Target & Strategy */}
-                <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-2.5 text-center">
-                    <span className="block text-xs text-slate-500">
-                      Target Berat
-                    </span>
-                    <span className="font-mono font-bold text-emerald-400">
-                      ~
+                <div className="mt-4 grid grid-cols-3 gap-2.5 text-xs">
+                  <div className="rounded-xl border border-slate-800/70 bg-slate-950/50 p-3 text-center">
+                    <span className="block text-[11px] text-slate-500">Target Berat</span>
+                    <span className={`${UNIT_ROW} mt-1 justify-center font-mono text-sm font-bold text-emerald-400`}>
                       <RollingNumber
                         value={weightTarget.targetOptimalKg}
                         maximumFractionDigits={1}
+                        prefix="~"
                       />
-                      <span className="ml-1">kg</span>
+                      <span className="text-[11px] font-medium text-emerald-500/80">kg</span>
                     </span>
                   </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-2.5 text-center">
-                    <span className="block text-xs text-slate-500">TDEE</span>
-                    <span className="font-mono font-bold text-blue-400">
+                  <div className="rounded-xl border border-slate-800/70 bg-slate-950/50 p-3 text-center">
+                    <span className="block text-[11px] text-slate-500">TDEE</span>
+                    <span className={`${UNIT_ROW} mt-1 justify-center font-mono text-sm font-bold text-blue-400`}>
                       <RollingNumber value={tdee} />
-                      <span className="ml-1">kkal</span>
+                      <span className="text-[11px] font-medium text-blue-400/75">kkal</span>
                     </span>
                   </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-2.5 text-center">
-                    <span className="block text-xs text-slate-500">
-                      Target Kalori
-                    </span>
-                    <span className="font-mono font-bold text-emerald-400">
+                  <div className="rounded-xl border border-slate-800/70 bg-slate-950/50 p-3 text-center">
+                    <span className="block text-[11px] text-slate-500">Target Kalori</span>
+                    <span className={`${UNIT_ROW} mt-1 justify-center font-mono text-sm font-bold text-emerald-400`}>
                       <RollingNumber value={strategy.targetCalories} />
-                      <span className="ml-1">kkal</span>
+                      <span className="text-[11px] font-medium text-emerald-500/80">kkal</span>
                     </span>
                   </div>
                 </div>
@@ -770,9 +779,9 @@ function HealthEngine() {
 
           {/* ==================== TAB 2: OLAHRAGA ==================== */}
           {activeTab === 'workout' && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               {/* Sub-tab Switcher: Pembentukan Otot vs Bela Diri Praktis */}
-              <div className="relative flex rounded-2xl border border-slate-800 bg-slate-900 p-1">
+              <div className="relative flex rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/90 to-slate-950/95 p-1">
                 {[
                   {
                     id: 'muscle',
@@ -815,7 +824,7 @@ function HealthEngine() {
 
               {/* Sub-tab 1: Pembentukan Otot (Gym & Kalistenik) */}
               {workoutSubTab === 'muscle' && (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {/* Day Selector */}
                   <div className="grid grid-cols-7 gap-1">
                     {DAY_NAMES.map((day) => {
@@ -853,7 +862,7 @@ function HealthEngine() {
                   </div>
 
                   {/* Muscle Focus Header */}
-                  <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+                  <div className={`${CARD_SURFACE} p-5`}>
                     <div className="mb-1 flex items-center gap-2">
                       <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 font-mono text-xs font-bold text-blue-400">
                         {currentDayData.day}
@@ -869,16 +878,16 @@ function HealthEngine() {
                     </h2>
                     <div className="mt-2 flex items-center gap-2 text-xs text-slate-400">
                       <span>⏱️ {currentDayData.duration}</span>
-                      <span>•</span>
+                      <span aria-hidden="true">•</span>
                       <span>{currentDayData.slots.length} gerakan</span>
                     </div>
 
                     {currentDayData.targetMusclesSummary.length > 0 ? (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
+                      <div className="mt-3 flex flex-wrap gap-1.5">
                         {currentDayData.targetMusclesSummary.map((muscle) => (
                           <span
                             key={muscle}
-                            className="rounded-md border border-slate-800 bg-slate-950 px-2 py-0.5 text-xs font-medium text-slate-300"
+                            className="rounded-md border border-slate-800/80 bg-slate-950/60 px-2 py-0.5 text-xs font-medium text-slate-300"
                           >
                             {muscle}
                           </span>
@@ -919,10 +928,10 @@ function HealthEngine() {
                     </div>
                   )}
 
-                  {/* Exercise Slots */}
+                  {/* Exercise Slots — kartu lipat inline, bukan modal */}
                   {!currentDayData.isRestDay &&
                     currentDayData.slots.length > 0 && (
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         {currentDayData.slots.map((slot, slotIndex) => {
                           const { variation, availableCount, currentIndex } =
                             getActiveVariation(
@@ -931,26 +940,48 @@ function HealthEngine() {
                               slot
                             );
                           return (
-                            <div
-                              key={slotIndex}
-                              className="cursor-pointer space-y-2 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 transition hover:border-slate-700"
-                              onClick={() => setSelectedExercise(variation)}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0 flex-1">
-                                  <div className="mb-1 flex items-center gap-2">
-                                    <span className="font-mono text-xs font-bold text-slate-500">
-                                      #{slotIndex + 1}
-                                    </span>
-                                    <span className="text-xs text-slate-500">
-                                      {slot.slotLabel}
-                                    </span>
+                            <ExpandableCard
+                              key={`${selectedDayName}-${slotIndex}`}
+                              defaultExpanded={false}
+                              expandLabel={`Buka detail ${variation.name}`}
+                              headerAction={
+                                availableCount > 1 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleSwapVariation(
+                                        selectedDayName,
+                                        slotIndex,
+                                        slot
+                                      )
+                                    }
+                                    aria-label={`Ganti variasi gerakan, variasi ${currentIndex + 1} dari ${availableCount}`}
+                                    className="flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-950/80 px-2.5 font-mono text-xs font-semibold text-blue-400 transition-colors hover:border-blue-500/40 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+                                  >
+                                    ⟳ {currentIndex + 1}/{availableCount}
+                                  </button>
+                                ) : null
+                              }
+                              header={
+                                <>
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="font-mono text-[11px] font-bold text-slate-500">
+                                          #{String(slotIndex + 1).padStart(2, '0')}
+                                        </span>
+                                        <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">
+                                          {slot.slotLabel}
+                                        </span>
+                                      </div>
+                                      <h4 className="mt-1 text-sm font-bold leading-snug text-slate-100">
+                                        {variation.name}
+                                      </h4>
+                                    </div>
                                   </div>
-                                  <h4 className="text-sm font-bold leading-snug text-slate-100">
-                                    {variation.name}
-                                  </h4>
-                                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                                    <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-1.5 py-0.5 text-xs font-medium text-blue-400">
+
+                                  <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                                    <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-400">
                                       {EQUIPMENT_LIST.find(
                                         (equipment) =>
                                           equipment.id === variation.equipment
@@ -961,43 +992,32 @@ function HealthEngine() {
                                       .map((muscle) => (
                                         <span
                                           key={muscle}
-                                          className="rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-400"
+                                          className="rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-0.5 text-[11px] font-medium text-rose-400"
                                         >
                                           {MUSCLE_LABELS_ID[muscle] || muscle}
                                         </span>
                                       ))}
                                   </div>
-                                </div>
 
-                                {/* Swap Button */}
-                                {availableCount > 1 ? (
-                                  <button
-                                    type="button"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      handleSwapVariation(
-                                        selectedDayName,
-                                        slotIndex,
-                                        slot
-                                      );
-                                    }}
-                                    className="flex min-h-11 min-w-11 shrink-0 items-center gap-1 rounded-xl border border-slate-800 bg-slate-950 px-3 text-xs font-semibold text-blue-400 transition hover:bg-slate-800"
-                                  >
-                                    ⟳ {currentIndex + 1}/{availableCount}
-                                  </button>
-                                ) : null}
-                              </div>
-
-                              <div className="flex items-center gap-3 font-mono text-xs">
-                                <span className="font-semibold text-emerald-400">
-                                  {variation.setsReps}
-                                </span>
-                                <span className="text-slate-600">|</span>
-                                <span className="text-amber-400">
-                                  Rest {variation.rest}
-                                </span>
-                              </div>
-                            </div>
+                                  <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs">
+                                    <span className={UNIT_ROW}>
+                                      <span className="font-semibold text-emerald-400">
+                                        {variation.setsReps}
+                                      </span>
+                                    </span>
+                                    <span className="h-3 w-px bg-slate-700" aria-hidden="true" />
+                                    <span className={UNIT_ROW}>
+                                      <span className="text-slate-500">Rest</span>
+                                      <span className="font-semibold text-amber-400">
+                                        {variation.rest}
+                                      </span>
+                                    </span>
+                                  </div>
+                                </>
+                              }
+                            >
+                              <ExerciseDetailPanel exercise={variation} />
+                            </ExpandableCard>
                           );
                         })}
                       </div>
@@ -1005,7 +1025,7 @@ function HealthEngine() {
 
                   {/* Rest Day Message */}
                   {currentDayData.isRestDay && (
-                    <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-6 text-center">
+                    <div className={`${CARD_SURFACE} space-y-3 p-6 text-center`}>
                       <span className="text-4xl">😴</span>
                       <h3 className="text-lg font-bold text-slate-100">
                         Hari Pemulihan
@@ -1020,7 +1040,7 @@ function HealthEngine() {
 
                   {/* Completion Card */}
                   {!currentDayData.isRestDay && (
-                    <div className="space-y-2 rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+                    <div className={`${CARD_SURFACE} space-y-3 p-5`}>
                       <div className="flex items-center justify-between gap-2">
                         <div>
                           <p className="text-xs text-slate-500">
@@ -1078,7 +1098,7 @@ function HealthEngine() {
 
           {/* ==================== TAB 3: MAKANAN ==================== */}
           {activeTab === 'meals' && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               {/* Day Selector */}
               <div className="grid grid-cols-7 gap-1">
                 {DAY_NAMES.map((day) => {
@@ -1108,7 +1128,7 @@ function HealthEngine() {
               </div>
 
               {/* Budget Filter */}
-              <div className="relative flex rounded-2xl border border-slate-800 bg-slate-900 p-1">
+              <div className="relative flex rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/90 to-slate-950/95 p-1">
                 {[
                   {
                     id: 'budget',
@@ -1147,7 +1167,7 @@ function HealthEngine() {
               </div>
 
               {/* Nutrition Target Banner */}
-              <div className="space-y-2 rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+              <div className={`${CARD_SURFACE} space-y-3 p-5 sm:p-6`}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-bold text-slate-300">
                     Target Nutrisi Harian
@@ -1165,28 +1185,40 @@ function HealthEngine() {
                   </span>
                 </div>
                 <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
+                  <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-2.5">
                     <span className="block text-slate-500">Kalori</span>
-                    <span className="font-mono font-bold text-white">
-                      <RollingNumber value={strategy.targetCalories} />
+                    <span className={`${UNIT_ROW} mt-1 justify-center text-white`}>
+                      <span className="font-mono text-sm font-bold">
+                        <RollingNumber value={strategy.targetCalories} />
+                      </span>
+                      <span className="text-[11px] font-medium text-slate-500">kkal</span>
                     </span>
                   </div>
-                  <div className="rounded-xl border border-blue-500/20 bg-slate-950/70 p-2">
+                  <div className="rounded-xl border border-blue-500/20 bg-slate-950/60 p-2.5">
                     <span className="block text-blue-400">Protein</span>
-                    <span className="font-mono font-bold text-blue-400">
-                      <RollingNumber value={strategy.macros.proteinG} />g
+                    <span className={`${UNIT_ROW} mt-1 justify-center font-mono text-blue-400`}>
+                      <span className="text-sm font-bold">
+                        <RollingNumber value={strategy.macros.proteinG} />
+                      </span>
+                      <span className="text-[11px] font-medium text-blue-400/75">g</span>
                     </span>
                   </div>
-                  <div className="rounded-xl border border-emerald-500/20 bg-slate-950/70 p-2">
+                  <div className="rounded-xl border border-emerald-500/20 bg-slate-950/60 p-2.5">
                     <span className="block text-emerald-400">Karbo</span>
-                    <span className="font-mono font-bold text-emerald-400">
-                      <RollingNumber value={strategy.macros.carbsG} />g
+                    <span className={`${UNIT_ROW} mt-1 justify-center font-mono text-emerald-400`}>
+                      <span className="text-sm font-bold">
+                        <RollingNumber value={strategy.macros.carbsG} />
+                      </span>
+                      <span className="text-[11px] font-medium text-emerald-400/75">g</span>
                     </span>
                   </div>
-                  <div className="rounded-xl border border-amber-500/20 bg-slate-950/70 p-2">
+                  <div className="rounded-xl border border-amber-500/20 bg-slate-950/60 p-2.5">
                     <span className="block text-amber-400">Lemak</span>
-                    <span className="font-mono font-bold text-amber-400">
-                      <RollingNumber value={strategy.macros.fatG} />g
+                    <span className={`${UNIT_ROW} mt-1 justify-center font-mono text-amber-400`}>
+                      <span className="text-sm font-bold">
+                        <RollingNumber value={strategy.macros.fatG} />
+                      </span>
+                      <span className="text-[11px] font-medium text-amber-400/75">g</span>
                     </span>
                   </div>
                 </div>
@@ -1194,12 +1226,12 @@ function HealthEngine() {
 
               {/* Kartu Buah Harian & Tombol Pengalihan Kalori */}
               {activeFruit && (
-                <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+                <div className={`${CARD_SURFACE} space-y-4 p-5`}>
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5">
                       <span className="text-2xl">{activeFruit.emoji}</span>
                       <div>
-                        <span className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                        <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
                           Buah Harian ({selectedDayName})
                         </span>
                         <h4 className="text-sm font-bold text-white">
@@ -1218,20 +1250,24 @@ function HealthEngine() {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-2.5">
+                  <div className="grid grid-cols-2 gap-2.5 text-xs">
+                    <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-3">
                       <span className="block text-slate-500">Takaran URT</span>
-                      <span className="font-semibold text-slate-200">
+                      <span className="mt-1 block font-semibold text-slate-200">
                         {activeFruit.householdPortion}
                       </span>
                     </div>
-                    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-2.5">
+                    <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-3">
                       <span className="block text-slate-500">Nilai Kalori</span>
-                      <span className="font-mono font-bold text-emerald-400">
-                        <RollingNumber value={activeFruit.calories} /> kkal
+                      <span className={`${UNIT_ROW} mt-1 font-mono text-emerald-400`}>
+                        <span className="text-sm font-bold">
+                          <RollingNumber value={activeFruit.calories} />
+                        </span>
+                        <span className="text-[11px] font-medium text-emerald-400/75">kkal</span>
                       </span>
-                      <span className="ml-1 text-xs text-slate-400">
-                        ({activeFruit.carbs}g karbo)
+                      <span className={`${UNIT_ROW} mt-1 text-[11px] text-slate-400`}>
+                        <span className="font-mono">{activeFruit.carbs}</span>
+                        <span>g karbo</span>
                       </span>
                     </div>
                   </div>
@@ -1244,10 +1280,10 @@ function HealthEngine() {
                   <button
                     type="button"
                     onClick={handleToggleSkipFruit}
-                    className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border text-xs font-bold transition active:scale-95 ${
+                    className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border text-xs font-bold transition-colors ${
                       skipFruit
-                        ? 'border-emerald-500/40 bg-slate-950 text-emerald-400 hover:bg-slate-800'
-                        : 'border-amber-500/40 bg-slate-950 text-amber-400 hover:bg-slate-800'
+                        ? 'border-emerald-500/40 bg-slate-950/70 text-emerald-400 hover:bg-slate-800'
+                        : 'border-amber-500/40 bg-slate-950/70 text-amber-400 hover:bg-slate-800'
                     }`}
                   >
                     {skipFruit ? (
@@ -1265,119 +1301,187 @@ function HealthEngine() {
                 </div>
               )}
 
-              {/* 4 Meal Cards */}
+              {/* 4 Meal Cards — lipatan inline, bukan pop-up */}
               {dayMeals && (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {[
                     { key: 'breakfast', label: '🌅 Sarapan', meal: dayMeals.breakfast },
                     { key: 'lunch', label: '☀️ Makan Siang', meal: dayMeals.lunch },
                     { key: 'snack', label: '🥟 Jajan', meal: dayMeals.snack },
                     { key: 'dinner', label: '🌙 Makan Malam', meal: dayMeals.dinner },
                   ].map(({ key, label, meal }) => (
-                    <button
+                    <ExpandableCard
                       key={key}
-                      type="button"
-                      className="w-full space-y-2.5 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-left transition hover:border-slate-700 active:scale-[0.995]"
-                      onClick={() => setSelectedFoodForModal(meal)}
+                      defaultExpanded={false}
+                      expandLabel={`Buka detail menu ${meal.name}`}
+                      header={
+                        <>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-400">
+                                {label}
+                              </span>
+                              <h4 className="mt-1 text-sm font-bold leading-snug text-slate-100">
+                                {meal.name}
+                              </h4>
+                            </div>
+                            <span aria-hidden="true" className="shrink-0 text-xl">
+                              {meal.emoji}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-xs text-slate-400">
+                            <span className={UNIT_ROW}>
+                              <strong className="text-sm font-bold text-white">
+                                <RollingNumber value={meal.calories} />
+                              </strong>
+                              <span className="text-[11px] font-medium text-slate-500">
+                                kkal
+                              </span>
+                            </span>
+                            <span className={UNIT_ROW}>
+                              <span className="text-slate-500">P</span>
+                              <strong className="text-blue-400">{meal.protein}</strong>
+                              <span className="text-[11px] font-medium text-slate-500">g</span>
+                            </span>
+                            <span className={UNIT_ROW}>
+                              <span className="text-slate-500">K</span>
+                              <strong className="text-emerald-400">{meal.carbs}</strong>
+                              <span className="text-[11px] font-medium text-slate-500">g</span>
+                            </span>
+                            <span className={UNIT_ROW}>
+                              <span className="text-slate-500">L</span>
+                              <strong className="text-amber-400">{meal.fat}</strong>
+                              <span className="text-[11px] font-medium text-slate-500">g</span>
+                            </span>
+                          </div>
+                        </>
+                      }
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <span className="text-xs font-semibold text-blue-400">
-                            {label}
-                          </span>
-                          <h4 className="mt-0.5 text-sm font-bold leading-snug text-slate-100">
-                            {meal.name}
-                          </h4>
+                      <div className="space-y-4 pt-1">
+                        <p className="text-xs leading-relaxed text-slate-400">
+                          {meal.shortDesc}
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-2.5 text-xs">
+                          <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-3.5">
+                            <span className="block text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                              Estimasi Harga
+                            </span>
+                            <span className="mt-1 block font-mono text-base font-bold text-emerald-400">
+                              Rp {meal.priceEstimateIdr?.toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                          <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-3.5">
+                            <span className="block text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                              Waktu Olah
+                            </span>
+                            <span className="mt-1 block text-sm font-semibold text-slate-200">
+                              {meal.prepTime || '15 menit'}
+                            </span>
+                          </div>
                         </div>
-                        <span className="shrink-0 text-lg">{meal.emoji}</span>
-                      </div>
 
-                      <p className="line-clamp-1 text-xs text-slate-500">
-                        {meal.shortDesc}
-                      </p>
-
-                      {(meal.scaledHouseholdPortion ||
-                        meal.householdPortion) && (
-                        <div className="rounded-lg border border-slate-800/80 bg-slate-950 p-2 text-xs text-slate-300">
-                          <span className="mr-1 font-semibold text-emerald-400">
-                            🥄 URT:
-                          </span>
-                          <span>
+                        <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-4">
+                          <h5 className="mb-1.5 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400">
+                            🥄 Takaran Ukuran Rumah Tangga
+                          </h5>
+                          <p className="text-xs font-medium leading-relaxed text-slate-200">
                             {meal.scaledHouseholdPortion ||
-                              meal.householdPortion}
-                          </span>
-                        </div>
-                      )}
-
-                      {key === 'snack' && skipFruit ? (
-                        <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold text-amber-400">
-                          <span>✨</span>
-                          <span>
-                            +Kalori dialihkan dari jatah buah (+
-                            {activeFruit.calories} kkal)
-                          </span>
-                        </div>
-                      ) : null}
-
-                      {meal.portionNote &&
-                        meal.portionNote !==
-                          'Porsi standar (sesuai resep asli)' && (
-                          <p className="rounded border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-400">
-                            📏 {meal.portionNote}
+                              meal.householdPortion ||
+                              '1 porsi standar (sesuai bahan)'}
                           </p>
-                        )}
+                          {meal.portionNote &&
+                            meal.portionNote !==
+                              'Porsi standar (sesuai resep asli)' && (
+                              <p className="mt-2 inline-block rounded border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-400">
+                                📏 {meal.portionNote}
+                              </p>
+                            )}
+                        </div>
 
-                      <div className="flex flex-wrap items-center gap-3 font-mono text-xs text-slate-400">
-                        <span>
-                          🔥{' '}
-                          <strong className="text-white">
-                            <RollingNumber value={meal.calories} />
-                          </strong>{' '}
-                          kkal
-                        </span>
-                        <span>
-                          P:{' '}
-                          <strong className="text-blue-400">
-                            {meal.protein}g
-                          </strong>
-                        </span>
-                        <span>
-                          K:{' '}
-                          <strong className="text-emerald-400">
-                            {meal.carbs}g
-                          </strong>
-                        </span>
-                        <span>
-                          L:{' '}
-                          <strong className="text-amber-400">
-                            {meal.fat}g
-                          </strong>
-                        </span>
+                        {key === 'snack' && skipFruit ? (
+                          <div className="flex items-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-400">
+                            <span aria-hidden="true">✨</span>
+                            <span>
+                              +Kalori dialihkan dari jatah buah (+
+                              {activeFruit.calories} kkal)
+                            </span>
+                          </div>
+                        ) : null}
+
+                        <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-4">
+                          <h5 className="mb-1.5 text-xs font-bold text-slate-300">
+                            Bahan &amp; Komposisi
+                          </h5>
+                          <p className="text-xs leading-relaxed text-slate-300">
+                            {meal.ingredients}
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/15 p-4">
+                          <h5 className="mb-1.5 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400">
+                            💡 Tips Pengolahan Sehat
+                          </h5>
+                          <p className="text-xs leading-relaxed text-slate-300">
+                            {meal.cookTip}
+                          </p>
+                        </div>
+
+                        {meal.benefits ? (
+                          <div className="rounded-xl border border-sky-500/20 bg-sky-950/15 p-4">
+                            <h5 className="mb-1.5 inline-flex items-center gap-1.5 text-xs font-bold text-sky-400">
+                              🛡️ Manfaat untuk Tubuh
+                            </h5>
+                            <p className="text-xs leading-relaxed text-slate-300">
+                              {meal.benefits}
+                            </p>
+                          </div>
+                        ) : null}
                       </div>
-                    </button>
+                    </ExpandableCard>
                   ))}
                 </div>
               )}
 
               {/* Daily Total */}
               {dayTotals && (
-                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3 text-center font-mono text-xs">
-                  <span className="text-slate-400">Total Hari Ini: </span>
-                  <strong className="text-white">
-                    <RollingNumber value={dayTotals.calories} /> kkal
-                  </strong>
-                  <span className="mx-2 text-slate-600">|</span>
-                  <span className="text-blue-400">
-                    P: <RollingNumber value={dayTotals.protein} />g
+                <div className={`${CARD_SURFACE} p-4 text-center`}>
+                  <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    Total Hari Ini
                   </span>
-                  <span className="mx-2 text-slate-600">|</span>
-                  <span className="text-emerald-400">
-                    K: <RollingNumber value={dayTotals.carbs} />g
-                  </span>
-                  <span className="mx-2 text-slate-600">|</span>
-                  <span className="text-amber-400">
-                    L: <RollingNumber value={dayTotals.fat} />g
-                  </span>
+                  <div className="mt-2 flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1 font-mono text-xs">
+                    <span className={UNIT_ROW}>
+                      <strong className="text-base font-bold text-white">
+                        <RollingNumber value={dayTotals.calories} />
+                      </strong>
+                      <span className="text-[11px] font-medium text-slate-500">kkal</span>
+                    </span>
+                    <span className="h-3 w-px bg-slate-700" aria-hidden="true" />
+                    <span className={`${UNIT_ROW} text-blue-400`}>
+                      <span className="text-slate-500">P</span>
+                      <strong>
+                        <RollingNumber value={dayTotals.protein} />
+                      </strong>
+                      <span className="text-[11px] font-medium text-blue-400/75">g</span>
+                    </span>
+                    <span className="h-3 w-px bg-slate-700" aria-hidden="true" />
+                    <span className={`${UNIT_ROW} text-emerald-400`}>
+                      <span className="text-slate-500">K</span>
+                      <strong>
+                        <RollingNumber value={dayTotals.carbs} />
+                      </strong>
+                      <span className="text-[11px] font-medium text-emerald-400/75">g</span>
+                    </span>
+                    <span className="h-3 w-px bg-slate-700" aria-hidden="true" />
+                    <span className={`${UNIT_ROW} text-amber-400`}>
+                      <span className="text-slate-500">L</span>
+                      <strong>
+                        <RollingNumber value={dayTotals.fat} />
+                      </strong>
+                      <span className="text-[11px] font-medium text-amber-400/75">g</span>
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
@@ -1430,20 +1534,6 @@ function HealthEngine() {
           biometrics={bio}
           onSave={handleBioSave}
           onClose={() => setShowBioModal(false)}
-        />
-      )}
-
-      {selectedExercise && (
-        <MuscleAnatomyModal
-          exercise={selectedExercise}
-          onClose={() => setSelectedExercise(null)}
-        />
-      )}
-
-      {selectedFoodForModal && (
-        <MealDetailModal
-          food={selectedFoodForModal}
-          onClose={() => setSelectedFoodForModal(null)}
         />
       )}
     </div>

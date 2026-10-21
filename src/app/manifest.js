@@ -1,6 +1,6 @@
 export default function manifest() {
   return {
-    name: 'HealthEngine V3 — Kebugaran & Nutrisi Indonesia',
+    name: 'HealthEngine V3.1 — Kebugaran & Nutrisi Indonesia',
     short_name: 'HealthEngine',
     description: 'Aplikasi latihan beban rumahan, anatomi otot interaktif, dan panduan nutrisi harian.',
     start_url: '/',

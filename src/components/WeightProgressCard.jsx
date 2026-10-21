@@ -81,7 +81,7 @@ export default function WeightProgressCard({ weightHistory = [], weightTarget, a
 
   if (weightHistory.length === 0) {
     return (
-      <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5">
+      <div className="rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/90 via-slate-900/70 to-slate-950/95 p-5 shadow-[inset_0_1px_0_0_rgba(148,163,184,0.07),0_20px_45px_-32px_rgba(0,0,0,0.95)]">
         <div className="flex items-center gap-2 mb-3">
           <span className="text-base">📈</span>
           <h3 className="text-sm font-bold text-slate-100">Perkembangan Berat Badan</h3>
@@ -92,12 +92,13 @@ export default function WeightProgressCard({ weightHistory = [], weightTarget, a
   }
 
   return (
-    <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-4">
+    <div className="space-y-4 rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/90 via-slate-900/70 to-slate-950/95 p-5 shadow-[inset_0_1px_0_0_rgba(148,163,184,0.07),0_20px_45px_-32px_rgba(0,0,0,0.95)]">
       <div className="flex items-center gap-2">
         <span className="text-base">📈</span>
         <h3 className="text-sm font-bold text-slate-100">Perkembangan Berat Badan</h3>
-        <span className="text-xs text-slate-500 font-mono ml-auto">
-          <RollingNumber value={weightHistory.length} /> catatan
+        <span className="ml-auto inline-flex items-baseline gap-1 tabular-nums font-mono text-xs text-slate-500">
+          <RollingNumber value={weightHistory.length} />
+          <span>catatan</span>
         </span>
       </div>
 
@@ -141,7 +142,10 @@ export default function WeightProgressCard({ weightHistory = [], weightTarget, a
             <div key={entry.date} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs">
               <span className="text-slate-500 font-mono w-12 shrink-0">{dateFormatted.slice(0, 5)}</span>
               <span className="font-bold font-mono text-slate-100">
-                <RollingNumber value={entry.weight} maximumFractionDigits={1} /> kg
+                <span className="inline-flex items-baseline gap-1 tabular-nums">
+                  <RollingNumber value={entry.weight} maximumFractionDigits={1} />
+                  <span className="text-[11px] font-medium text-slate-400">kg</span>
+                </span>
               </span>
               {changeInfo && (
                 <>

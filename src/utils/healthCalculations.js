@@ -349,6 +349,32 @@ export function calculateWorkoutStreak(completedDates = [], restDayNumbers = [0,
 }
 
 // 10. Mengalikan makronutrien makanan sesuai target kalori pengguna
+const SPOON_UNITS = new Set(['sdm', 'sdt']);
+
+/**
+ * Membulatkan takaran URT agar terasa manusiawi:
+ * - sendok (sdm/sdt) -> bilangan bulat, minimal 1
+ * - gram -> bilangan bulat, minimal 1 (nilai gizi tetap dari rasio asli)
+ * - satuan rumah tangga lain -> kelipatan 0,5 terdekat, minimal 0,5
+ */
+function roundHouseholdAmount(amount, unit) {
+  const normalizedUnit = unit.toLowerCase();
+
+  if (SPOON_UNITS.has(normalizedUnit)) {
+    return Math.max(1, Math.round(amount));
+  }
+
+  if (normalizedUnit === 'g') {
+    return Math.max(1, Math.round(amount));
+  }
+
+  return Math.max(0.5, Math.round(amount * 2) / 2);
+}
+
+function formatHouseholdAmount(amount) {
+  return Number.isInteger(amount) ? String(amount) : amount.toFixed(1);
+}
+
 export function scaleMealToTarget(meal, dailyTargetCalories, baseDailyCalories) {
   if (!meal) return meal;
   if (!baseDailyCalories || baseDailyCalories <= 0) {
@@ -366,16 +392,17 @@ export function scaleMealToTarget(meal, dailyTargetCalories, baseDailyCalories) 
     portionNote = 'Porsi standar (sesuai resep asli)';
   }
 
-  // Skalakan takaran URT (centong, potong, sdm, dll) secara proporsional
+  // Skalakan takaran URT secara proporsional, lalu bulatkan tiap satuan ke
+  // angka natural tanpa mengubah kalori/makro yang dihitung dari rasio asli.
   let scaledHouseholdPortion = meal.householdPortion || '';
   if (meal.householdPortion && Math.abs(ratio - 1) >= 0.05) {
     scaledHouseholdPortion = meal.householdPortion.replace(
-      /(\d+(?:\.\d+)?)\s*(centong|potong|sdm|sdt|butir|lembar|buah|mangkok|ekor|g\b|kaleng|biji|bungkus)/gi,
-      (match, p1, p2) => {
-        const orig = parseFloat(p1);
-        const scaled = orig * ratio;
-        const formatted = scaled >= 10 ? Math.round(scaled) : Number(scaled.toFixed(1));
-        return `${formatted} ${p2}`;
+      /(\d+(?:[.,]\d+)?)\s*(centong|potong|sdm|sdt|butir|lembar|buah|mangkok|gelas|ekor|kaleng|biji|bungkus|genggam|batang|ruas|juring|papan|iris|g\b)/gi,
+      (match, rawAmount, unit) => {
+        const originalAmount = parseFloat(String(rawAmount).replace(',', '.'));
+        if (!Number.isFinite(originalAmount)) return match;
+        const scaled = originalAmount * ratio;
+        return `${formatHouseholdAmount(roundHouseholdAmount(scaled, unit))} ${unit}`;
       }
     );
   }
