@@ -10,6 +10,9 @@
       "models": {
         "deepseek-chat": {
           "name": "DeepSeek V3 (ModelRouter)"
+        },
+        "claude-haiku-5.5:mr": {
+          "name": "Claude Haiku 5.5 (ModelRouter)"
         }
       }
     }

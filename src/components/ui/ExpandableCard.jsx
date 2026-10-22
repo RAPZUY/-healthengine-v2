@@ -18,6 +18,7 @@ export default function ExpandableCard({
   header,
   children,
   headerAction,
+  visibleContent,
   defaultExpanded = false,
   className = '',
   headerClassName = '',
@@ -83,7 +84,7 @@ export default function ExpandableCard({
 
   return (
     <div
-      className={`overflow-hidden rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/90 via-slate-900/75 to-slate-950/95 shadow-[inset_0_1px_0_0_rgba(148,163,184,0.07),0_20px_45px_-32px_rgba(0,0,0,0.95)] transition-colors duration-200 hover:border-slate-700/80 ${className}`}
+      className={`surface-card overflow-hidden rounded-2xl transition-colors duration-200 ${className}`}
     >
       <div className={`flex items-stretch ${headerClassName}`}>
         <button
@@ -114,6 +115,12 @@ export default function ExpandableCard({
           <div className="flex shrink-0 items-start py-3 pr-4 sm:py-4 sm:pr-5">{headerAction}</div>
         ) : null}
       </div>
+
+      {visibleContent ? (
+        <div className="border-t border-slate-800/70 px-5 py-4 sm:px-6">
+          {visibleContent}
+        </div>
+      ) : null}
 
       <motion.div
         id={panelId}

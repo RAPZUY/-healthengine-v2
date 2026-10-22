@@ -105,7 +105,7 @@ export default function BiometricModal({ biometrics, onSave, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-slate-800 bg-slate-950 text-slate-400 transition hover:bg-slate-800 hover:text-white"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-slate-800 bg-slate-950 text-slate-400 transition hover:bg-slate-800 hover:text-slate-100"
             aria-label="Tutup"
           >
             <X size={18} strokeWidth={2.3} />
@@ -126,7 +126,7 @@ export default function BiometricModal({ biometrics, onSave, onClose }) {
                 className={`min-h-11 rounded-xl text-sm font-semibold transition ${
                   gender === 'male'
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-950/30'
-                    : 'border border-slate-800 bg-slate-950 text-slate-400 hover:text-white'
+                    : 'border border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-100'
                 }`}
               >
                 ♂ Pria
@@ -137,7 +137,7 @@ export default function BiometricModal({ biometrics, onSave, onClose }) {
                 className={`min-h-11 rounded-xl text-sm font-semibold transition ${
                   gender === 'female'
                     ? 'bg-pink-600 text-white shadow-lg shadow-pink-950/30'
-                    : 'border border-slate-800 bg-slate-950 text-slate-400 hover:text-white'
+                    : 'border border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-100'
                 }`}
               >
                 ♀ Wanita
@@ -236,7 +236,7 @@ export default function BiometricModal({ biometrics, onSave, onClose }) {
                     className={`min-h-11 rounded-xl text-xs font-semibold transition ${
                       isSelected
                         ? strategy.activeClass
-                        : 'border border-slate-800 bg-slate-950 text-slate-400 hover:text-white'
+                        : 'border border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-100'
                     }`}
                   >
                     {strategy.label}
@@ -269,7 +269,7 @@ export default function BiometricModal({ biometrics, onSave, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="min-h-11 w-full rounded-xl border border-slate-800 bg-slate-950 text-sm font-medium text-slate-400 transition hover:text-white"
+            className="min-h-11 w-full rounded-xl border border-slate-800 bg-slate-950 text-sm font-medium text-slate-400 transition hover:text-slate-100"
           >
             Batal
           </button>

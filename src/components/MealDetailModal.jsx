@@ -41,7 +41,7 @@ export default function MealDetailModal({ food, onClose }) {
                   {food.tier === 'budget' ? '💰 Ramah Kantong' : '🍱 Menu Pilihan'}
                 </span>
               </div>
-              <h3 className="text-base font-bold text-white leading-snug">
+              <h3 className="text-base font-bold text-slate-100 leading-snug">
                 {food.name}
               </h3>
             </div>
@@ -50,7 +50,7 @@ export default function MealDetailModal({ food, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="min-h-11 min-w-11 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center justify-center text-sm"
+            className="min-h-11 min-w-11 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition flex items-center justify-center text-sm"
             aria-label="Tutup modal"
           >
             ✕
@@ -84,7 +84,7 @@ export default function MealDetailModal({ food, onClose }) {
             <div className="grid grid-cols-4 gap-2 text-center">
               <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
                 <span className="text-xs text-slate-400 block font-medium">Kalori</span>
-                <span className="text-base font-bold font-mono text-white tabular-nums">{food.calories}</span>
+                <span className="text-base font-bold font-mono text-slate-100 tabular-nums">{food.calories}</span>
                 <span className="text-xs text-slate-500 block">kkal</span>
               </div>
               <div className="p-2.5 rounded-xl bg-slate-950 border border-blue-500/20">

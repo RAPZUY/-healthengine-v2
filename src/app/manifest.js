@@ -1,8 +1,9 @@
 export default function manifest() {
   return {
-    name: 'HealthEngine V3.1 — Kebugaran & Nutrisi Indonesia',
+    name: 'HealthEngine V4.0 — Kebugaran, Nutrisi & Lari',
     short_name: 'HealthEngine',
-    description: 'Aplikasi latihan beban rumahan, anatomi otot interaktif, dan panduan nutrisi harian.',
+    description:
+      'Latihan beban rumahan, timer istirahat, verifikasi gerakan, pencatat lari, dan panduan nutrisi harian dengan tema gelap atau terang.',
     start_url: '/',
     display: 'standalone',
     background_color: '#020617',

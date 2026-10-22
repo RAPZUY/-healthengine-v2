@@ -63,49 +63,63 @@ export default function InstallPwaBanner() {
   };
 
   return (
-    <div className="rounded-2xl bg-gradient-to-r from-blue-950/40 via-slate-900 to-emerald-950/40 border border-blue-500/30 p-3.5 mb-4 shadow-lg shadow-black/40">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-lg shrink-0">
+    <div className="surface-card mb-4 rounded-2xl p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="accent-pill flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg">
             📲
           </div>
-          <div className="min-w-0">
-            <h4 className="text-xs font-bold text-slate-100 truncate">
+          <div className="min-w-0 pt-0.5">
+            <h4 className="text-sm font-bold leading-snug text-slate-100">
               Pasang Aplikasi HealthEngine
             </h4>
-            <p className="text-xs text-slate-400 truncate">
-              Akses cepat tanpa browser & offline-ready
+            <p className="mt-1 text-xs leading-relaxed text-slate-400">
+              Akses cepat tanpa browser dan tetap terbuka saat offline.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            type="button"
-            onClick={handleInstallClick}
-            className="min-h-11 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition active:scale-95 flex items-center gap-1.5"
-          >
-            <span>Pasang di HP</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setDismissed(true)}
-            className="min-h-11 min-w-11 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center justify-center text-sm"
-            aria-label="Tutup banner instalasi"
-          >
-            ✕
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 transition-colors hover:text-slate-100"
+          aria-label="Tutup banner instalasi"
+        >
+          ✕
+        </button>
       </div>
+
+      <button
+        type="button"
+        onClick={handleInstallClick}
+        aria-expanded={isIOS ? showIOSGuide : undefined}
+        className="accent-solid mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-xs font-bold transition active:scale-[0.99]"
+      >
+        {isIOS ? 'Lihat Cara Pasang di iPhone' : 'Pasang di HP'}
+      </button>
 
       {/* Petunjuk instalasi khusus Safari iOS */}
       {showIOSGuide && isIOS && (
-        <div className="mt-3 pt-3 border-t border-slate-800/80 text-xs text-slate-300 space-y-1.5">
-          <p className="font-semibold text-emerald-400">Cara Pasang di iPhone / iPad (Safari):</p>
-          <ol className="list-decimal list-inside space-y-1 text-slate-300 leading-relaxed">
-            <li>Ketuk tombol <strong className="text-white">Share</strong> (ikon kotak dengan panah ke atas) di menu Safari bawah.</li>
-            <li>Gulir ke bawah dan pilih opsi <strong className="text-white">&quot;Tambahkan ke Layar Utama&quot;</strong> (Add to Home Screen).</li>
-            <li>Ketuk <strong className="text-white">&quot;Tambah&quot;</strong> di pojok kanan atas.</li>
+        <div className="mt-3 space-y-1.5 border-t border-slate-800/80 pt-3 text-xs text-slate-300">
+          <p className="font-semibold text-emerald-400">
+            Cara Pasang di iPhone / iPad (Safari):
+          </p>
+          <ol className="list-inside list-decimal space-y-1 leading-relaxed text-slate-300">
+            <li>
+              Ketuk tombol <strong className="text-slate-100">Share</strong> (ikon
+              kotak dengan panah ke atas) di menu Safari bawah.
+            </li>
+            <li>
+              Gulir ke bawah dan pilih opsi{' '}
+              <strong className="text-slate-100">
+                &quot;Tambahkan ke Layar Utama&quot;
+              </strong>{' '}
+              (Add to Home Screen).
+            </li>
+            <li>
+              Ketuk <strong className="text-slate-100">&quot;Tambah&quot;</strong>{' '}
+              di pojok kanan atas.
+            </li>
           </ol>
         </div>
       )}

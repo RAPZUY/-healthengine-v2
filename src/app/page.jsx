@@ -8,6 +8,7 @@ import {
   Dumbbell,
   Flame,
   Home,
+  LockKeyhole,
   Moon,
   RefreshCw,
   Sparkles,
@@ -30,11 +31,19 @@ import { WEEKLY_MEALS, BASE_DAILY_CALORIES, DAILY_FRUITS } from '@/data/nutritio
 import { WORKOUT_SCHEDULE, EQUIPMENT_LIST } from '@/data/workoutData';
 import BiometricModal from '@/components/BiometricModal';
 import MartialArtsSection from '@/components/MartialArtsSection';
+import RunningTrackerSection from '@/components/RunningTrackerSection';
 import WeightProgressCard from '@/components/WeightProgressCard';
 import InstallPwaBanner from '@/components/InstallPwaBanner';
 import TodoCalendar from '@/components/ui/TodoCalendar';
 import ExpandableCard from '@/components/ui/ExpandableCard';
 import ExerciseDetailPanel from '@/components/ExerciseDetailPanel';
+import ThemeSwitcher, {
+  ACCENTS,
+  DEFAULT_ACCENT_ID,
+  applyThemeToDocument,
+} from '@/components/ui/ThemeSwitcher';
+import SwipeToVerify from '@/components/ui/SwipeToVerify';
+import ExerciseTimer from '@/components/ui/ExerciseTimer';
 import { ToastProvider, useToast } from '@/components/ui/ToastProvider';
 import {
   motionTokens,
@@ -43,11 +52,10 @@ import {
 } from '@/components/ui/motion-primitives';
 
 // Versi rilis tampilan — samakan dengan CACHE_NAME di public/sw.js.
-const APP_VERSION = '3.1';
+const APP_VERSION = '4.0';
 
-// Permukaan kartu V3.1: gradien gelap lembut + hairline highlight di atas.
-const CARD_SURFACE =
-  'rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/90 via-slate-900/70 to-slate-950/95 shadow-[inset_0_1px_0_0_rgba(148,163,184,0.07),0_20px_45px_-32px_rgba(0,0,0,0.95)]';
+// Permukaan kartu V4: token semantik, bukan warna gelap hard-coded.
+const CARD_SURFACE = 'surface-card rounded-2xl';
 const UNIT_ROW = 'inline-flex items-baseline gap-1.5 tabular-nums';
 
 // Hari dalam seminggu
@@ -137,13 +145,17 @@ function HealthEngine() {
   // Core state
   const [isLoaded, setIsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
-  const [workoutSubTab, setWorkoutSubTab] = useState('muscle'); // 'muscle' | 'martial'
+  const [workoutSubTab, setWorkoutSubTab] = useState('muscle'); // 'muscle' | 'martial' | 'running'
+  const [themeMode, setThemeMode] = useState('dark');
+  const [accentId, setAccentId] = useState(DEFAULT_ACCENT_ID);
   const [skipFruit, setSkipFruit] = useState(false);
   const [bio, setBio] = useState(DEFAULT_BIO);
   const [ownedEquipment, setOwnedEquipment] = useState(['bodyweight']);
   const [completedDates, setCompletedDates] = useState([]);
   const [swappedSlots, setSwappedSlots] = useState({});
   const [weightHistory, setWeightHistory] = useState([]);
+  const [verifiedExercises, setVerifiedExercises] = useState({});
+  const [runningHistory, setRunningHistory] = useState([]);
   const [selectedDayName, setSelectedDayName] = useState(getTodayDayName());
   const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
   const [budgetTier, setBudgetTier] = useState('budget');
@@ -154,13 +166,24 @@ function HealthEngine() {
   // ==================== PERSISTENCE ====================
   useEffect(() => {
     try {
+      const v4Data = localStorage.getItem('healtyapp_v4_state');
       const v3Data = localStorage.getItem('healtyapp_v3_state');
       const v2Data = localStorage.getItem('healtyapp_v2_state');
-      const savedData = v3Data || v2Data;
+      const savedData = v4Data || v3Data || v2Data;
 
       if (savedData) {
         const parsed = JSON.parse(savedData);
+        const nextTheme = parsed.themeMode === 'light' ? 'light' : 'dark';
+        const nextAccent = ACCENTS.some(
+          (accent) => accent.id === parsed.accentId
+        )
+          ? parsed.accentId
+          : DEFAULT_ACCENT_ID;
+
         /* eslint-disable react-hooks/set-state-in-effect -- localStorage is only readable after hydration; this sets the persisted snapshot once */
+        setThemeMode(nextTheme);
+        setAccentId(nextAccent);
+        applyThemeToDocument(nextTheme, nextAccent);
         if (parsed.bio) setBio({ ...DEFAULT_BIO, ...parsed.bio });
         if (parsed.ownedEquipment) setOwnedEquipment(parsed.ownedEquipment);
         if (parsed.completedDates) setCompletedDates(parsed.completedDates);
@@ -168,6 +191,15 @@ function HealthEngine() {
         if (parsed.weightHistory) setWeightHistory(parsed.weightHistory);
         if (parsed.budgetTier) setBudgetTier(parsed.budgetTier);
         if (parsed.skipFruit !== undefined) setSkipFruit(parsed.skipFruit);
+        if (
+          parsed.verifiedExercises &&
+          typeof parsed.verifiedExercises === 'object'
+        ) {
+          setVerifiedExercises(parsed.verifiedExercises);
+        }
+        if (Array.isArray(parsed.runningHistory)) {
+          setRunningHistory(parsed.runningHistory);
+        }
         /* eslint-enable react-hooks/set-state-in-effect */
       } else {
         // Migrate from v1
@@ -211,18 +243,28 @@ function HealthEngine() {
     window.scrollTo({ top: 0, left: 0 });
   }, [activeTab]);
 
-  // Auto-save
+  // Apply the selected theme + accent to the document root.
+  useEffect(() => {
+    if (!isLoaded) return;
+    applyThemeToDocument(themeMode, accentId);
+  }, [themeMode, accentId, isLoaded]);
+
+  // Auto-save (V4 snapshot; V3 remains readable for migration).
   useEffect(() => {
     if (!isLoaded) return;
     try {
       localStorage.setItem(
-        'healtyapp_v3_state',
+        'healtyapp_v4_state',
         JSON.stringify({
+          themeMode,
+          accentId,
           bio,
           ownedEquipment,
           completedDates,
           swappedSlots,
           weightHistory,
+          verifiedExercises,
+          runningHistory,
           budgetTier,
           skipFruit,
         })
@@ -231,11 +273,15 @@ function HealthEngine() {
       console.warn('Gagal menyimpan:', err);
     }
   }, [
+    themeMode,
+    accentId,
     bio,
     ownedEquipment,
     completedDates,
     swappedSlots,
     weightHistory,
+    verifiedExercises,
+    runningHistory,
     budgetTier,
     skipFruit,
     isLoaded,
@@ -288,6 +334,21 @@ function HealthEngine() {
       WORKOUT_SCHEDULE[0]
     );
   }, [selectedDayName]);
+
+  // Verification progress for the selected date, keyed per workout slot.
+  const verifiedForDate = verifiedExercises[selectedDate] ?? [];
+  const totalExercises = currentDayData.isRestDay
+    ? 0
+    : currentDayData.slots.length;
+  const verifiedCount = currentDayData.isRestDay
+    ? 0
+    : currentDayData.slots.reduce(
+        (count, _slot, index) =>
+          count + (verifiedForDate.includes(index) ? 1 : 0),
+        0
+      );
+  const allExercisesVerified =
+    totalExercises === 0 || verifiedCount === totalExercises;
 
   // Get active variation for each slot (considering owned equipment and swaps)
   const getActiveVariation = useCallback(
@@ -369,12 +430,52 @@ function HealthEngine() {
       [swapKey]: nextIndex,
     }));
 
+    // A swapped movement is a different movement: require a fresh swipe.
+    setVerifiedExercises((previous) => {
+      const current = previous[selectedDate] ?? [];
+      if (!current.includes(slotIndex)) return previous;
+      return {
+        ...previous,
+        [selectedDate]: current.filter((index) => index !== slotIndex),
+      };
+    });
+
     toast({
       tone: 'neutral',
       text: 'Variasi gerakan diganti',
-      description: `${nextVariation.name} · ${dayName} · ${nextVariation.setsReps}`,
+      description: `${nextVariation.name} · ${dayName} · ${nextVariation.setsReps}. Verifikasi ulang gerakan ini.`,
       icon: <RefreshCw size={17} strokeWidth={2.2} />,
     });
+  };
+
+  const handleVerifyExercise = (slotIndex, nextVerified) => {
+    const dateKey = selectedDate;
+    setVerifiedExercises((previous) => {
+      const current = new Set(previous[dateKey] ?? []);
+      if (nextVerified) current.add(slotIndex);
+      else current.delete(slotIndex);
+      return {
+        ...previous,
+        [dateKey]: [...current].sort((a, b) => a - b),
+      };
+    });
+
+    if (nextVerified) {
+      const nextCount = new Set([...verifiedForDate, slotIndex]).size;
+      if (nextCount >= totalExercises) {
+        toast({
+          tone: 'success',
+          text: 'Semua gerakan terverifikasi',
+          description:
+            'Kamu bisa menekan "Selesaikan Latihan Hari Ini" untuk mengunci streak.',
+          icon: <Trophy size={17} strokeWidth={2.2} />,
+        });
+      }
+    }
+  };
+
+  const handleSaveRun = (entry) => {
+    setRunningHistory((previous) => [entry, ...previous].slice(0, 30));
   };
 
   const handleToggleWorkoutComplete = () => {
@@ -394,6 +495,25 @@ function HealthEngine() {
       return;
     }
 
+    if (!allExercisesVerified) {
+      const missingExercises = currentDayData.slots
+        .map((slot, index) => ({
+          index,
+          variation: getActiveVariation(selectedDayName, index, slot).variation,
+        }))
+        .filter(({ index }) => !verifiedForDate.includes(index))
+        .map(({ variation }) => variation.name);
+
+      toast({
+        tone: 'warning',
+        text: `Verifikasi semua gerakan dulu (${verifiedCount}/${totalExercises} selesai)`,
+        description: `Belum digeser: ${missingExercises.join(', ')}.`,
+        icon: <LockKeyhole size={17} strokeWidth={2.2} />,
+        duration: 7000,
+      });
+      return;
+    }
+
     setCompletedDates((previous) =>
       previous.includes(dateKey) ? previous : [...previous, dateKey]
     );
@@ -403,7 +523,7 @@ function HealthEngine() {
     toast({
       tone: 'success',
       text: 'Latihan Selesai! 🔥',
-      description: `${currentDayData.title} tercatat selesai. Streak latihanmu sekarang ${nextStreak.streak} hari.`,
+      description: `${currentDayData.title} tercatat selesai dengan ${verifiedCount} gerakan terverifikasi. Streak latihanmu sekarang ${nextStreak.streak} hari.`,
       icon: <Trophy size={17} strokeWidth={2.2} />,
       actionLabel: 'Lihat Agenda Beranda',
       onAction: () => setActiveTab('home'),
@@ -605,28 +725,45 @@ function HealthEngine() {
       {/* Aksen cahaya lembut di latar atas — satu sumber cahaya, bukan glow di setiap kartu. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top,rgba(37,99,235,0.16),rgba(16,185,129,0.05)_38%,transparent_70%)]"
+        className="app-aurora pointer-events-none absolute inset-x-0 top-0 h-72"
       />
 
       {/* ==================== HEADER ==================== */}
       <header className="sticky top-0 z-30 border-b border-slate-800/70 bg-gradient-to-b from-slate-950/95 to-slate-950/75 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
-        <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-3 sm:px-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-emerald-500 text-sm font-bold text-white shadow-lg shadow-blue-950/40">
+        <div className="mx-auto flex h-14 max-w-lg items-center justify-between gap-2 px-3 sm:px-4">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold shadow-lg shadow-black/25"
+              style={{
+                backgroundImage:
+                  'linear-gradient(135deg, var(--accent-color), var(--accent-strong))',
+                color: 'var(--accent-contrast)',
+              }}
+            >
               ⚡
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm font-bold text-white">HealthEngine</span>
-              <span className="rounded-md border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-xs font-semibold text-emerald-400">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="truncate text-sm font-bold text-slate-100">
+                HealthEngine
+              </span>
+              <span className="accent-pill shrink-0 rounded-md px-1.5 py-0.5 font-mono text-xs font-semibold">
                 V{APP_VERSION}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 rounded-full border border-slate-800/80 bg-slate-900/60 px-2.5 py-1.5 text-slate-300">
-            <span className="text-xs font-semibold">
-              <MorphingText value={activeTabLabel} />
-            </span>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <div className="hidden min-[360px]:flex items-center rounded-full border border-slate-800/80 bg-slate-900/60 px-2.5 py-1.5 text-slate-300">
+              <span className="text-xs font-semibold">
+                <MorphingText value={activeTabLabel} />
+              </span>
+            </div>
+            <ThemeSwitcher
+              themeMode={themeMode}
+              accentId={accentId}
+              onThemeModeChange={setThemeMode}
+              onAccentChange={setAccentId}
+            />
           </div>
         </div>
       </header>
@@ -697,7 +834,7 @@ function HealthEngine() {
                     <span className="block text-[11px] font-medium uppercase tracking-wide text-slate-500">
                       Tinggi
                     </span>
-                    <span className={`${UNIT_ROW} mt-1 font-mono text-lg font-bold text-white`}>
+                    <span className={`${UNIT_ROW} mt-1 font-mono text-lg font-bold text-slate-100`}>
                       <RollingNumber value={bio.heightCm} />
                       <span className="text-xs font-medium text-slate-400">cm</span>
                     </span>
@@ -706,7 +843,7 @@ function HealthEngine() {
                     <span className="block text-[11px] font-medium uppercase tracking-wide text-slate-500">
                       Berat
                     </span>
-                    <span className={`${UNIT_ROW} mt-1 font-mono text-lg font-bold text-white`}>
+                    <span className={`${UNIT_ROW} mt-1 font-mono text-lg font-bold text-slate-100`}>
                       <RollingNumber value={bio.weightKg} maximumFractionDigits={1} />
                       <span className="text-xs font-medium text-slate-400">kg</span>
                     </span>
@@ -715,7 +852,7 @@ function HealthEngine() {
                     <span className="block text-[11px] font-medium uppercase tracking-wide text-slate-500">
                       Usia
                     </span>
-                    <span className={`${UNIT_ROW} mt-1 font-mono text-lg font-bold text-white`}>
+                    <span className={`${UNIT_ROW} mt-1 font-mono text-lg font-bold text-slate-100`}>
                       <RollingNumber value={bio.age} />
                       <span className="text-xs font-medium text-slate-400">tahun</span>
                     </span>
@@ -724,7 +861,7 @@ function HealthEngine() {
                     <span className="block text-[11px] font-medium uppercase tracking-wide text-slate-500">
                       BMI
                     </span>
-                    <span className={`${UNIT_ROW} mt-1 font-mono text-lg font-bold text-white`}>
+                    <span className={`${UNIT_ROW} mt-1 font-mono text-lg font-bold text-slate-100`}>
                       <RollingNumber value={bmi} maximumFractionDigits={1} />
                       <span className="text-xs font-medium text-slate-400">kg/m²</span>
                     </span>
@@ -780,46 +917,55 @@ function HealthEngine() {
           {/* ==================== TAB 2: OLAHRAGA ==================== */}
           {activeTab === 'workout' && (
             <div className="space-y-5">
-              {/* Sub-tab Switcher: Pembentukan Otot vs Bela Diri Praktis */}
-              <div className="relative flex rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/90 to-slate-950/95 p-1">
-                {[
-                  {
-                    id: 'muscle',
-                    label: 'Pembentukan Otot',
-                    icon: '🏋️',
-                    activeClass: 'bg-blue-600',
-                  },
-                  {
-                    id: 'martial',
-                    label: 'Bela Diri Praktis',
-                    icon: '🥊',
-                    activeClass: 'bg-rose-600',
-                  },
-                ].map((subTab) => {
-                  const isActive = workoutSubTab === subTab.id;
-                  return (
-                    <button
-                      key={subTab.id}
-                      type="button"
-                      onClick={() => setWorkoutSubTab(subTab.id)}
-                      className={`relative flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl text-xs font-bold transition-colors ${
-                        isActive
-                          ? 'text-white'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {isActive ? (
-                        <motion.span
-                          layoutId="workout-subtab-active"
-                          className={`absolute inset-0 rounded-xl shadow-lg ${subTab.activeClass}`}
-                          transition={motionTokens.spring.morph}
-                        />
-                      ) : null}
-                      <span className="relative z-10">{subTab.icon}</span>
-                      <span className="relative z-10">{subTab.label}</span>
-                    </button>
-                  );
-                })}
+              {/* Sub-navigasi 3 modul: dua di atas, lari di tengah bawah */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { id: 'muscle', label: 'Pembentukan Otot', icon: '🏋️' },
+                    { id: 'martial', label: 'Bela Diri Praktis', icon: '🥊' },
+                  ].map((subTab) => {
+                    const isActive = workoutSubTab === subTab.id;
+                    return (
+                      <button
+                        key={subTab.id}
+                        type="button"
+                        onClick={() => setWorkoutSubTab(subTab.id)}
+                        aria-pressed={isActive}
+                        className={`flex min-h-14 items-center justify-center gap-1.5 rounded-2xl border px-2.5 text-[11px] font-bold leading-tight transition-colors ${
+                          isActive
+                            ? 'accent-solid'
+                            : 'border-slate-800 bg-slate-900/70 text-slate-300 hover:border-slate-700 hover:text-slate-100'
+                        }`}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="shrink-0 text-base"
+                        >
+                          {subTab.icon}
+                        </span>
+                        <span className="min-w-0 text-center">{subTab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setWorkoutSubTab('running')}
+                    aria-pressed={workoutSubTab === 'running'}
+                    className={`flex min-h-11 items-center justify-center gap-2 rounded-2xl border px-6 text-xs font-bold transition-colors ${
+                      workoutSubTab === 'running'
+                        ? 'accent-solid'
+                        : 'border-slate-800 bg-slate-900/70 text-slate-300 hover:border-slate-700 hover:text-slate-100'
+                    }`}
+                  >
+                    <span aria-hidden="true" className="text-base">
+                      🏃
+                    </span>
+                    <span>Latihan Lari &amp; Pace</span>
+                  </button>
+                </div>
               </div>
 
               {/* Sub-tab 1: Pembentukan Otot (Gym & Kalistenik) */}
@@ -837,16 +983,16 @@ function HealthEngine() {
                           onClick={() => handleSelectDayName(day)}
                           className={`relative flex min-h-11 flex-col items-center justify-center rounded-xl border text-center transition-colors ${
                             isSelected
-                              ? 'border-blue-500 text-white'
+                              ? 'border-transparent text-[var(--accent-contrast)]'
                               : isRest
-                                ? 'border-amber-500/20 bg-amber-950/20 text-amber-400'
+                                ? 'border-amber-500/25 bg-amber-500/10 text-amber-400'
                                 : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
                           }`}
                         >
                           {isSelected ? (
                             <motion.span
                               layoutId="workout-day-active"
-                              className="absolute inset-0 rounded-xl bg-blue-600 shadow-lg shadow-blue-950/40"
+                              className="accent-solid absolute inset-0 rounded-xl shadow-lg"
                               transition={motionTokens.spring.morph}
                             />
                           ) : null}
@@ -873,7 +1019,7 @@ function HealthEngine() {
                         </span>
                       ) : null}
                     </div>
-                    <h2 className="text-lg font-bold text-white">
+                    <h2 className="text-lg font-bold text-slate-100">
                       {currentDayData.title}
                     </h2>
                     <div className="mt-2 flex items-center gap-2 text-xs text-slate-400">
@@ -941,9 +1087,21 @@ function HealthEngine() {
                             );
                           return (
                             <ExpandableCard
-                              key={`${selectedDayName}-${slotIndex}`}
+                              key={`${selectedDate}-${slotIndex}`}
                               defaultExpanded={false}
                               expandLabel={`Buka detail ${variation.name}`}
+                              visibleContent={
+                                <SwipeToVerify
+                                  verified={verifiedForDate.includes(slotIndex)}
+                                  onVerifiedChange={(nextVerified) =>
+                                    handleVerifyExercise(
+                                      slotIndex,
+                                      nextVerified
+                                    )
+                                  }
+                                  label={variation.name}
+                                />
+                              }
                               headerAction={
                                 availableCount > 1 ? (
                                   <button
@@ -1016,7 +1174,13 @@ function HealthEngine() {
                                 </>
                               }
                             >
-                              <ExerciseDetailPanel exercise={variation} />
+                              <div className="space-y-4">
+                                <ExerciseTimer
+                                  key={variation.id}
+                                  exercise={variation}
+                                />
+                                <ExerciseDetailPanel exercise={variation} />
+                              </div>
                             </ExpandableCard>
                           );
                         })}
@@ -1040,7 +1204,7 @@ function HealthEngine() {
 
                   {/* Completion Card */}
                   {!currentDayData.isRestDay && (
-                    <div className={`${CARD_SURFACE} space-y-3 p-5`}>
+                    <div className={`${CARD_SURFACE} space-y-4 p-5 sm:p-6`}>
                       <div className="flex items-center justify-between gap-2">
                         <div>
                           <p className="text-xs text-slate-500">
@@ -1055,18 +1219,49 @@ function HealthEngine() {
                           >
                             {isSelectedDateCompleted
                               ? 'Selesai & tercatat'
-                              : 'Belum selesai'}
+                              : allExercisesVerified
+                                ? 'Siap diselesaikan'
+                                : 'Menunggu verifikasi'}
                           </p>
                         </div>
                         <span
                           className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
                             isSelectedDateCompleted
                               ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
-                              : 'border-slate-700 bg-slate-950 text-slate-400'
+                              : allExercisesVerified
+                                ? 'accent-pill'
+                                : 'border-slate-700 bg-slate-950 text-slate-400'
                           }`}
                         >
-                          {isSelectedDateCompleted ? '✓ Tuntas' : 'Menunggu'}
+                          {isSelectedDateCompleted
+                            ? '✓ Tuntas'
+                            : `${verifiedCount}/${totalExercises} gerakan`}
                         </span>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2 text-[11px]">
+                          <span className="font-semibold text-slate-400">
+                            Gerakan terverifikasi
+                          </span>
+                          <span className="accent-text font-mono font-bold">
+                            {verifiedCount}/{totalExercises}
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800/80">
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: 'var(--accent-color)' }}
+                            animate={{
+                              width: `${
+                                totalExercises > 0
+                                  ? (verifiedCount / totalExercises) * 100
+                                  : 0
+                              }%`,
+                            }}
+                            transition={motionTokens.spring.smooth}
+                          />
+                        </div>
                       </div>
 
                       <motion.button
@@ -1074,17 +1269,40 @@ function HealthEngine() {
                         onClick={handleToggleWorkoutComplete}
                         whileTap={reduce ? undefined : { scale: 0.98 }}
                         transition={motionTokens.spring.smooth}
-                        className={`min-h-11 w-full rounded-xl text-sm font-bold transition ${
+                        aria-disabled={
+                          !isSelectedDateCompleted && !allExercisesVerified
+                        }
+                        className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-center text-sm font-bold transition ${
                           isSelectedDateCompleted
                             ? 'border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/15'
-                            : 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/30 hover:bg-emerald-500'
+                            : allExercisesVerified
+                              ? 'accent-solid shadow-lg shadow-black/20'
+                              : 'border border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800'
                         }`}
                       >
-                        {isSelectedDateCompleted
-                          ? 'Batalkan Status Selesai'
-                          : selectedDate === todayStr
-                            ? 'Selesaikan Latihan Hari Ini'
-                            : 'Tandai Latihan Selesai'}
+                        {isSelectedDateCompleted ? (
+                          'Batalkan Status Selesai'
+                        ) : allExercisesVerified ? (
+                          selectedDate === todayStr ? (
+                            'Selesaikan Latihan Hari Ini'
+                          ) : (
+                            'Tandai Latihan Selesai'
+                          )
+                        ) : (
+                          <>
+                            <LockKeyhole
+                              size={15}
+                              strokeWidth={2.4}
+                              aria-hidden="true"
+                            />
+                            <span className="flex flex-col items-center leading-tight">
+                              <span>Verifikasi Semua Gerakan Dulu</span>
+                              <span className="font-mono text-[11px] font-semibold opacity-80">
+                                ({verifiedCount}/{totalExercises} Selesai)
+                              </span>
+                            </span>
+                          </>
+                        )}
                       </motion.button>
                     </div>
                   )}
@@ -1093,6 +1311,15 @@ function HealthEngine() {
 
               {/* Sub-tab 2: Modul Bela Diri Praktis */}
               {workoutSubTab === 'martial' && <MartialArtsSection />}
+
+              {/* Sub-tab 3: Latihan Lari & Pace */}
+              {workoutSubTab === 'running' && (
+                <RunningTrackerSection
+                  weightKg={bio.weightKg}
+                  runningHistory={runningHistory}
+                  onSaveRun={handleSaveRun}
+                />
+              )}
             </div>
           )}
 
@@ -1110,14 +1337,14 @@ function HealthEngine() {
                       onClick={() => handleSelectDayName(day)}
                       className={`relative min-h-11 rounded-xl border text-center text-xs font-semibold transition-colors ${
                         isSelected
-                          ? 'border-blue-500 text-white'
+                          ? 'border-transparent text-[var(--accent-contrast)]'
                           : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
                       }`}
                     >
                       {isSelected ? (
                         <motion.span
                           layoutId="meal-day-active"
-                          className="absolute inset-0 rounded-xl bg-blue-600 shadow-lg shadow-blue-950/40"
+                          className="accent-solid absolute inset-0 rounded-xl shadow-lg"
                           transition={motionTokens.spring.morph}
                         />
                       ) : null}
@@ -1130,16 +1357,8 @@ function HealthEngine() {
               {/* Budget Filter */}
               <div className="relative flex rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/90 to-slate-950/95 p-1">
                 {[
-                  {
-                    id: 'budget',
-                    label: '💰 Anak Kos',
-                    activeClass: 'bg-emerald-600',
-                  },
-                  {
-                    id: 'standard',
-                    label: '🍱 Standar',
-                    activeClass: 'bg-blue-600',
-                  },
+                  { id: 'budget', label: '💰 Anak Kos' },
+                  { id: 'standard', label: '🍱 Standar' },
                 ].map((tier) => {
                   const isActive = budgetTier === tier.id;
                   return (
@@ -1149,14 +1368,14 @@ function HealthEngine() {
                       onClick={() => setBudgetTier(tier.id)}
                       className={`relative min-h-11 flex-1 rounded-xl text-xs font-semibold transition-colors ${
                         isActive
-                          ? 'text-white'
-                          : 'text-slate-400 hover:text-white'
+                          ? 'text-[var(--accent-contrast)]'
+                          : 'text-slate-400 hover:text-slate-100'
                       }`}
                     >
                       {isActive ? (
                         <motion.span
                           layoutId="meal-budget-active"
-                          className={`absolute inset-0 rounded-xl shadow-lg ${tier.activeClass}`}
+                          className="accent-solid absolute inset-0 rounded-xl shadow-lg"
                           transition={motionTokens.spring.morph}
                         />
                       ) : null}
@@ -1187,7 +1406,7 @@ function HealthEngine() {
                 <div className="grid grid-cols-4 gap-2 text-center text-xs">
                   <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-2.5">
                     <span className="block text-slate-500">Kalori</span>
-                    <span className={`${UNIT_ROW} mt-1 justify-center text-white`}>
+                    <span className={`${UNIT_ROW} mt-1 justify-center text-slate-100`}>
                       <span className="font-mono text-sm font-bold">
                         <RollingNumber value={strategy.targetCalories} />
                       </span>
@@ -1234,7 +1453,7 @@ function HealthEngine() {
                         <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
                           Buah Harian ({selectedDayName})
                         </span>
-                        <h4 className="text-sm font-bold text-white">
+                        <h4 className="text-sm font-bold text-slate-100">
                           {activeFruit.name}
                         </h4>
                       </div>
@@ -1332,7 +1551,7 @@ function HealthEngine() {
 
                           <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-xs text-slate-400">
                             <span className={UNIT_ROW}>
-                              <strong className="text-sm font-bold text-white">
+                              <strong className="text-sm font-bold text-slate-100">
                                 <RollingNumber value={meal.calories} />
                               </strong>
                               <span className="text-[11px] font-medium text-slate-500">
@@ -1452,7 +1671,7 @@ function HealthEngine() {
                   </span>
                   <div className="mt-2 flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1 font-mono text-xs">
                     <span className={UNIT_ROW}>
-                      <strong className="text-base font-bold text-white">
+                      <strong className="text-base font-bold text-slate-100">
                         <RollingNumber value={dayTotals.calories} />
                       </strong>
                       <span className="text-[11px] font-medium text-slate-500">kkal</span>
@@ -1503,14 +1722,14 @@ function HealthEngine() {
                 aria-current={isActive ? 'page' : undefined}
                 className={`relative flex min-h-14 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
                   isActive
-                    ? 'text-blue-400'
+                    ? 'accent-text'
                     : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
                 {isActive ? (
                   <motion.span
                     layoutId="bottom-nav-active"
-                    className="absolute inset-x-2 inset-y-1.5 rounded-2xl border border-blue-500/25 bg-blue-600/15"
+                    className="accent-pill absolute inset-x-2 inset-y-1.5 rounded-2xl"
                     transition={motionTokens.spring.morph}
                   />
                 ) : null}

@@ -481,7 +481,7 @@ export default function MuscleAnatomyModal({ exercise, onClose }) {
             <button
               type="button"
               onClick={onClose}
-              className="min-h-11 min-w-11 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center justify-center shrink-0"
+              className="min-h-11 min-w-11 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition flex items-center justify-center shrink-0"
               aria-label="Tutup"
             >
               ✕
@@ -569,7 +569,7 @@ export default function MuscleAnatomyModal({ exercise, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="w-full min-h-11 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 hover:text-white text-sm font-medium transition"
+            className="w-full min-h-11 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 hover:text-slate-100 text-sm font-medium transition"
           >
             Tutup
           </button>

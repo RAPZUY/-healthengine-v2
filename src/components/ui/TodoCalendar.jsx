@@ -150,7 +150,7 @@ function useBoxFollower(containerRef, getTarget, measureKey) {
 function DayFollower({ follower, variant = 'hover' }) {
   const className =
     variant === 'selected'
-      ? 'border border-blue-500 bg-blue-600 shadow-lg shadow-blue-950/50'
+      ? 'border shadow-lg shadow-black/20'
       : 'border border-slate-700/60 bg-slate-800/70';
 
   return (
@@ -163,6 +163,10 @@ function DayFollower({ follower, variant = 'hover' }) {
         width: follower.width,
         height: follower.height,
         opacity: follower.visible ? 1 : 0,
+        backgroundColor:
+          variant === 'selected' ? 'var(--accent-color)' : undefined,
+        borderColor:
+          variant === 'selected' ? 'var(--accent-color)' : undefined,
       }}
     />
   );
@@ -434,7 +438,7 @@ export default function TodoCalendar({
                   aria-label={longDateFormatter.format(day)}
                   className={`relative z-10 flex min-h-11 w-full flex-col items-center justify-center rounded-xl text-xs transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
                     isSelected
-                      ? 'text-white'
+                      ? 'text-[var(--accent-contrast)]'
                       : isOutside
                         ? 'text-slate-600'
                         : isRestDay
@@ -448,7 +452,7 @@ export default function TodoCalendar({
                   {isToday ? (
                     <span
                       className={`absolute bottom-1 h-1 w-1 rounded-full ${
-                        isSelected ? 'bg-blue-100' : 'bg-emerald-400'
+                        isSelected ? 'bg-[var(--accent-contrast)]' : 'bg-emerald-400'
                       }`}
                     />
                   ) : null}

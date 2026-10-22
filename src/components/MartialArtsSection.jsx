@@ -158,7 +158,7 @@ export default function MartialArtsSection() {
               className={`min-h-11 px-2 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 ${
                 isSelected
                   ? 'bg-blue-600 border-blue-500 text-white shadow-md'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-100 hover:border-slate-700'
               }`}
             >
               <span className="text-sm">{d.emoji}</span>
@@ -178,7 +178,7 @@ export default function MartialArtsSection() {
             {activeDiscipline.techniques.length} Teknik Inti
           </span>
         </div>
-        <h3 className="text-base font-bold text-white flex items-center gap-2">
+        <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
           <span>{activeDiscipline.emoji}</span>
           <span>{activeDiscipline.name}</span>
         </h3>
@@ -228,7 +228,7 @@ export default function MartialArtsSection() {
               className={`min-h-11 px-3 rounded-xl border text-xs font-semibold transition flex items-center gap-1 ${
                 isAutoPlay
                   ? 'bg-emerald-600/20 border-emerald-500/40 text-emerald-300'
-                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-100'
               }`}
               aria-label="Toggle Auto Play Loop"
             >
@@ -255,7 +255,7 @@ export default function MartialArtsSection() {
             className={`min-h-11 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
               currentStep === 1
                 ? 'bg-rose-600 text-white shadow'
-                : 'text-slate-400 hover:text-white'
+                : 'text-slate-400 hover:text-slate-100'
             }`}
           >
             <span>⚠️</span>
@@ -267,7 +267,7 @@ export default function MartialArtsSection() {
             className={`min-h-11 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
               currentStep === 2
                 ? 'bg-emerald-600 text-white shadow'
-                : 'text-slate-400 hover:text-white'
+                : 'text-slate-400 hover:text-slate-100'
             }`}
           >
             <span>🛡️</span>
@@ -921,7 +921,7 @@ export default function MartialArtsSection() {
             <span className="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider block">
               Panduan Taktis Eksekusi
             </span>
-            <h4 className="text-sm font-bold text-white">{activeTech.name}</h4>
+            <h4 className="text-sm font-bold text-slate-100">{activeTech.name}</h4>
           </div>
           <span className="text-xs font-medium px-2 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-800">
             Kanal: {activeTech.channelName}
