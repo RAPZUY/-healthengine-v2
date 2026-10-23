@@ -20,7 +20,7 @@ export const viewport = {
 };
 
 export const metadata = {
-  title: "HealthEngine V4.0 — Kalkulator Kesehatan, Latihan & Lari",
+  title: "HealthEngine V4.1 — Kalkulator Kesehatan, Latihan & Lari",
   description:
     "Kalkulator BMI, target nutrisi, program latihan mingguan, timer istirahat, verifikasi gerakan, dan pencatat lari dengan tema gelap/terang serta aksen pastel.",
   appleWebApp: {
@@ -46,9 +46,11 @@ const THEME_INIT_SCRIPT = `
       teal: ['#84dcc6', '#020617', '#84dcc6', '#0f766e', '#84dcc6', '#0d9488']
     };
     var accent = accents[parsed.accentId] || accents.engine;
+    var accentId = accents[parsed.accentId] ? parsed.accentId : 'engine';
     var mode = parsed.themeMode === 'light' ? 'light' : 'dark';
     var root = document.documentElement;
     root.dataset.theme = mode;
+    root.dataset.accent = accentId;
     root.style.colorScheme = mode;
     root.style.setProperty('--accent-color', accent[0]);
     root.style.setProperty('--accent-contrast', accent[1]);
@@ -60,6 +62,7 @@ const THEME_INIT_SCRIPT = `
     if (meta) meta.setAttribute('content', mode === 'light' ? '#f4f6fb' : '#020617');
   } catch (error) {
     document.documentElement.dataset.theme = 'dark';
+    document.documentElement.dataset.accent = 'engine';
   }
 })();
 `;

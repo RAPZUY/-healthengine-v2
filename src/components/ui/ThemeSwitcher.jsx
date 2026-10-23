@@ -88,6 +88,7 @@ export function applyThemeToDocument(themeMode, accentId) {
   const accent = getAccent(accentId);
 
   root.dataset.theme = themeMode === 'light' ? 'light' : 'dark';
+  root.dataset.accent = accent.id;
   root.style.colorScheme = themeMode === 'light' ? 'light' : 'dark';
   root.style.setProperty('--accent-color', accent.value);
   root.style.setProperty('--accent-contrast', accent.contrast);

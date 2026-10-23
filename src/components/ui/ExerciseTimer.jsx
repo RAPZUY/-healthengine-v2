@@ -215,7 +215,7 @@ export default function ExerciseTimer({ exercise, className = '' }) {
           <div
             role="group"
             aria-label="Jenis timer"
-            className="flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-950/50 p-1"
+            className="surface-inset flex items-center gap-1 rounded-xl p-1"
           >
             <button
               type="button"
@@ -290,7 +290,7 @@ export default function ExerciseTimer({ exercise, className = '' }) {
           }`}
           style={{
             backgroundColor:
-              remaining === 0 ? undefined : 'var(--accent-color)',
+              remaining === 0 ? undefined : 'var(--app-selected-bg)',
           }}
           animate={{ width: `${progress}%` }}
           transition={

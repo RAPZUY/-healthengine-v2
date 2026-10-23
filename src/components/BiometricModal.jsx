@@ -81,7 +81,7 @@ export default function BiometricModal({ biometrics, onSave, onClose }) {
       onClick={onClose}
     >
       <motion.div
-        className="relative max-h-[90vh] w-full max-w-md overflow-y-auto overscroll-contain rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl"
+        className="surface-card relative max-h-[90vh] w-full max-w-md overflow-y-auto overscroll-contain rounded-3xl shadow-2xl"
         initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 12 }}
         animate={reduce ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
         transition={motionTokens.spring.morph}

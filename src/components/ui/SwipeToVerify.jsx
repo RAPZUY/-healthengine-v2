@@ -117,7 +117,7 @@ export default function SwipeToVerify({
         className={`relative flex min-h-12 w-full select-none items-center overflow-hidden rounded-full border text-xs transition-colors ${
           verified
             ? 'border-emerald-500/40 bg-emerald-500/10'
-            : 'surface-inset border-slate-800'
+            : 'surface-inset'
         } touch-pan-y`}
         style={{ height: '3.5rem' }}
       >
@@ -139,7 +139,7 @@ export default function SwipeToVerify({
             </span>
             <span
               aria-hidden="true"
-              className="absolute right-1 top-1 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-950/25"
+              className="absolute right-1 top-1 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-950/25"
             >
               <Check size={20} strokeWidth={3} />
             </span>

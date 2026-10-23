@@ -164,9 +164,9 @@ function DayFollower({ follower, variant = 'hover' }) {
         height: follower.height,
         opacity: follower.visible ? 1 : 0,
         backgroundColor:
-          variant === 'selected' ? 'var(--accent-color)' : undefined,
+          variant === 'selected' ? 'var(--app-selected-bg)' : undefined,
         borderColor:
-          variant === 'selected' ? 'var(--accent-color)' : undefined,
+          variant === 'selected' ? 'var(--app-selected-bg)' : undefined,
       }}
     />
   );
@@ -314,11 +314,11 @@ export default function TodoCalendar({
 
   return (
     <section
-      className={`w-full max-w-[34rem] overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/90 p-5 text-slate-100 shadow-xl shadow-black/40 sm:p-6 ${className}`}
+      className={`surface-card w-full max-w-[34rem] overflow-hidden rounded-3xl p-5 text-slate-100 sm:p-6 ${className}`}
       aria-label="Kalender agenda"
     >
       {/* Header */}
-      <header className="flex items-start justify-between gap-4 border-b border-slate-800 px-1 pb-4">
+      <header className="flex items-start justify-between gap-4 border-b border-[var(--app-card-border)] px-1 pb-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/10 text-blue-400">
             <CalendarDays size={18} strokeWidth={2.2} />
@@ -340,7 +340,7 @@ export default function TodoCalendar({
           <button
             type="button"
             onClick={toggleCalendar}
-            className="flex min-h-11 min-w-11 items-center justify-center gap-0.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 transition hover:border-slate-700 hover:text-slate-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+            className="surface-chip flex min-h-11 min-w-11 items-center justify-center gap-0.5 rounded-xl text-slate-400 transition hover:border-slate-600 hover:text-slate-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
             aria-expanded={calendarOpen}
             aria-label={
               calendarOpen
@@ -365,7 +365,7 @@ export default function TodoCalendar({
             <button
               type="button"
               onClick={goToPreviousMonth}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-slate-800 bg-slate-950 text-slate-400 transition hover:border-slate-700 hover:text-slate-200"
+              className="surface-chip flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-400 transition hover:border-slate-600 hover:text-slate-200"
               aria-label="Bulan sebelumnya"
             >
               <ChevronLeft size={18} strokeWidth={2.3} />
@@ -378,7 +378,7 @@ export default function TodoCalendar({
             <button
               type="button"
               onClick={goToNextMonth}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-slate-800 bg-slate-950 text-slate-400 transition hover:border-slate-700 hover:text-slate-200"
+              className="surface-chip flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-400 transition hover:border-slate-600 hover:text-slate-200"
               aria-label="Bulan berikutnya"
             >
               <ChevronRight size={18} strokeWidth={2.3} />
@@ -438,7 +438,7 @@ export default function TodoCalendar({
                   aria-label={longDateFormatter.format(day)}
                   className={`relative z-10 flex min-h-11 w-full flex-col items-center justify-center rounded-xl text-xs transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
                     isSelected
-                      ? 'text-[var(--accent-contrast)]'
+                      ? 'text-[var(--app-selected-fg)]'
                       : isOutside
                         ? 'text-slate-600'
                         : isRestDay
@@ -452,7 +452,7 @@ export default function TodoCalendar({
                   {isToday ? (
                     <span
                       className={`absolute bottom-1 h-1 w-1 rounded-full ${
-                        isSelected ? 'bg-[var(--accent-contrast)]' : 'bg-emerald-400'
+                        isSelected ? 'bg-[var(--app-selected-fg)]' : 'bg-emerald-400'
                       }`}
                     />
                   ) : null}
@@ -464,12 +464,12 @@ export default function TodoCalendar({
       </AutoHeight>
 
       {/* Daily agenda */}
-      <div className="mt-3 border-t border-slate-800 pt-3">
+      <div className="mt-3 border-t border-[var(--app-card-border)] pt-3">
         <div className="mb-2 flex items-center justify-between gap-2">
           <h3 className="flex items-center gap-1.5 text-sm font-bold text-slate-100">
             <Sparkles size={14} className="text-blue-400" />
             Agenda
-            <span className="rounded-full bg-slate-800 px-1.5 py-0.5 text-xs font-mono text-slate-400">
+            <span className="surface-chip rounded-full px-1.5 py-0.5 text-xs font-mono text-slate-400">
               {items.length}
             </span>
           </h3>
@@ -480,7 +480,7 @@ export default function TodoCalendar({
 
         <AutoHeight key={`agenda-${selectedKey}-${items.length}`}>
           {items.length === 0 ? (
-            <div className="flex min-h-11 items-center gap-2 rounded-2xl border border-dashed border-slate-800 px-3 text-xs text-slate-500">
+            <div className="surface-inset flex min-h-11 items-center gap-2 rounded-2xl border-dashed px-3 text-xs text-slate-500">
               <CalendarDays size={16} />
               Tidak ada agenda untuk tanggal ini.
             </div>
@@ -500,13 +500,13 @@ export default function TodoCalendar({
                     delay: index * 0.04,
                     ease: [0.16, 1, 0.3, 1],
                   }}
-                  className="flex min-h-11 w-full items-start gap-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-3 text-left transition hover:border-slate-700 hover:bg-slate-950 active:scale-[0.995]"
+                  className="surface-inset flex min-h-11 w-full items-start gap-3 rounded-2xl p-3 text-left transition hover:border-slate-600 active:scale-[0.995]"
                 >
                   <span
                     className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
                       item.completed
                         ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-400'
-                        : 'border-slate-600 bg-slate-900 text-transparent'
+                        : 'surface-chip text-transparent'
                     }`}
                     aria-hidden="true"
                   >

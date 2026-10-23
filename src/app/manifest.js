@@ -1,6 +1,6 @@
 export default function manifest() {
   return {
-    name: 'HealthEngine V4.0 — Kebugaran, Nutrisi & Lari',
+    name: 'HealthEngine V4.1 — Kebugaran, Nutrisi & Lari',
     short_name: 'HealthEngine',
     description:
       'Latihan beban rumahan, timer istirahat, verifikasi gerakan, pencatat lari, dan panduan nutrisi harian dengan tema gelap atau terang.',

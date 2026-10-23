@@ -19,6 +19,8 @@ export default function ExpandableCard({
   children,
   headerAction,
   visibleContent,
+  expanded,
+  onToggle,
   defaultExpanded = false,
   className = '',
   headerClassName = '',
@@ -26,12 +28,22 @@ export default function ExpandableCard({
   expandLabel = 'Buka detail',
   collapseLabel = 'Tutup detail',
 }) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
+  const isControlled = expanded !== undefined;
+  const isExpanded = isControlled ? expanded : internalExpanded;
   const reduce = useReducedMotion();
   const contentRef = useRef(null);
   const measuredHeight = useRef(0);
   const height = useMotionValue(0);
   const panelId = useId();
+
+  const handleToggle = () => {
+    if (isControlled) {
+      onToggle?.(!isExpanded);
+      return;
+    }
+    setInternalExpanded((previous) => !previous);
+  };
 
   // Ukur tinggi natural konten dan ikuti perubahan ukuran (mis. teks membungkus
   // ulang saat viewport berubah) tanpa mengunci tinggi ke nilai lama.
@@ -41,7 +53,7 @@ export default function ExpandableCard({
 
     const syncHeight = () => {
       measuredHeight.current = element.getBoundingClientRect().height;
-      if (expanded) {
+      if (isExpanded) {
         if (reduce) {
           height.set(measuredHeight.current);
         } else {
@@ -66,21 +78,21 @@ export default function ExpandableCard({
       if (observer) observer.disconnect();
       window.removeEventListener('resize', syncHeight);
     };
-  }, [expanded, height, reduce]);
+  }, [isExpanded, height, reduce]);
 
   useEffect(() => {
     if (reduce) {
-      height.set(expanded ? measuredHeight.current : 0);
+      height.set(isExpanded ? measuredHeight.current : 0);
       return undefined;
     }
 
-    const controls = animate(height, expanded ? measuredHeight.current : 0, {
+    const controls = animate(height, isExpanded ? measuredHeight.current : 0, {
       duration: motionTokens.duration.standard,
       ease: motionTokens.ease.standard,
     });
 
     return () => controls.stop();
-  }, [expanded, height, reduce]);
+  }, [isExpanded, height, reduce]);
 
   return (
     <div
@@ -89,16 +101,16 @@ export default function ExpandableCard({
       <div className={`flex items-stretch ${headerClassName}`}>
         <button
           type="button"
-          onClick={() => setExpanded((previous) => !previous)}
-          aria-expanded={expanded}
+          onClick={handleToggle}
+          aria-expanded={isExpanded}
           aria-controls={panelId}
-          aria-label={`${expanded ? collapseLabel : expandLabel}`}
+          aria-label={`${isExpanded ? collapseLabel : expandLabel}`}
           className="flex min-h-11 flex-1 touch-manipulation items-start gap-3 px-5 py-4 text-left focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-500 sm:px-6 sm:py-5"
         >
           <span className="min-w-0 flex-1">{header}</span>
-          <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-700/70 bg-slate-950/60 text-slate-400">
+          <span className="surface-chip mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400">
             <motion.span
-              animate={{ rotate: expanded ? 180 : 0 }}
+              animate={{ rotate: isExpanded ? 180 : 0 }}
               transition={
                 reduce
                   ? { duration: 0 }
@@ -117,7 +129,7 @@ export default function ExpandableCard({
       </div>
 
       {visibleContent ? (
-        <div className="border-t border-slate-800/70 px-5 py-4 sm:px-6">
+        <div className="border-t border-[var(--app-card-border)] px-5 py-4 sm:px-6">
           {visibleContent}
         </div>
       ) : null}
@@ -125,8 +137,8 @@ export default function ExpandableCard({
       <motion.div
         id={panelId}
         style={{ height }}
-        aria-hidden={!expanded}
-        inert={!expanded ? true : undefined}
+        aria-hidden={!isExpanded}
+        inert={!isExpanded ? true : undefined}
         className="overflow-hidden"
       >
         <div

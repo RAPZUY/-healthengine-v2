@@ -169,11 +169,11 @@ function RunChart({ history, metric }) {
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop
               offset="0%"
-              style={{ stopColor: 'var(--accent-color)', stopOpacity: 0.28 }}
+              style={{ stopColor: 'var(--accent-strong)', stopOpacity: 0.28 }}
             />
             <stop
               offset="100%"
-              style={{ stopColor: 'var(--accent-color)', stopOpacity: 0 }}
+              style={{ stopColor: 'var(--accent-strong)', stopOpacity: 0 }}
             />
           </linearGradient>
         </defs>
@@ -235,7 +235,7 @@ function RunChart({ history, metric }) {
             cy={point.y}
             r="3.2"
             fill="var(--accent-strong)"
-            stroke="var(--surface-1)"
+            stroke="var(--app-card-bg)"
             strokeWidth="1.6"
           >
             <title>
@@ -415,7 +415,7 @@ export default function RunningTrackerSection({
               kategori performa dihitung otomatis.
             </p>
           </div>
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950/60 text-slate-400">
+          <span className="surface-chip flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-slate-400">
             <Footprints size={20} strokeWidth={2.2} aria-hidden="true" />
           </span>
         </div>
@@ -580,7 +580,7 @@ export default function RunningTrackerSection({
                   ? 'bg-emerald-500/15 text-emerald-400'
                   : feedback.direction < 0
                     ? 'bg-amber-500/15 text-amber-400'
-                    : 'bg-slate-800 text-slate-400'
+                    : 'surface-chip text-slate-400'
               }`}
             >
               <TrendIcon direction={feedback.direction} />
@@ -617,7 +617,7 @@ export default function RunningTrackerSection({
           <div
             role="group"
             aria-label="Metrik grafik lari"
-            className="flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-950/50 p-1"
+            className="surface-inset flex items-center gap-1 rounded-xl p-1"
           >
             {[
               { id: 'pace', label: 'Pace' },

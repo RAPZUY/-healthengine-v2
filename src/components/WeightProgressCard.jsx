@@ -209,7 +209,7 @@ export default function WeightProgressCard({
     return (
       <div className="surface-card rounded-2xl p-5 sm:p-6">
         <div className="mb-3 flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400">
+          <span className="surface-chip flex h-9 w-9 items-center justify-center rounded-xl text-slate-400">
             📈
           </span>
           <h3 className="text-sm font-bold text-slate-100">
@@ -239,19 +239,14 @@ export default function WeightProgressCard({
       })()
     : null;
 
-  const toneClass =
-    evaluation.tone === 'positive'
-      ? 'border-emerald-500/25 bg-emerald-500/10'
-      : evaluation.tone === 'warning'
-        ? 'border-amber-500/25 bg-amber-500/10'
-        : 'surface-inset';
+  const toneClass = 'surface-inset';
 
   const iconClass =
     evaluation.tone === 'positive'
-      ? 'bg-emerald-500/15 text-emerald-400'
+      ? 'surface-chip text-emerald-400'
       : evaluation.tone === 'warning'
-        ? 'bg-amber-500/15 text-amber-400'
-        : 'bg-slate-800 text-slate-400';
+        ? 'surface-chip text-amber-400'
+        : 'surface-chip text-slate-400';
 
   const ChartIcon =
     evaluation.direction > 0
@@ -264,7 +259,7 @@ export default function WeightProgressCard({
     <div className="surface-card space-y-5 rounded-2xl p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400">
+          <span className="surface-chip flex h-9 w-9 items-center justify-center rounded-xl text-slate-400">
             📈
           </span>
           <div>
@@ -280,7 +275,7 @@ export default function WeightProgressCard({
 
         <div className="flex items-center gap-2">
           {targetWeight ? (
-            <span className="rounded-lg border border-slate-800 bg-slate-950/60 px-2 py-1 font-mono text-[11px] font-semibold text-slate-400">
+            <span className="surface-chip rounded-lg px-2 py-1 font-mono text-[11px] font-semibold text-slate-400">
               ~{targetWeight.toFixed(1)} kg
             </span>
           ) : null}
@@ -291,7 +286,7 @@ export default function WeightProgressCard({
                   ? 'bg-amber-500/10 text-amber-400'
                   : changeInfo.direction < 0
                     ? 'bg-emerald-500/10 text-emerald-400'
-                    : 'bg-slate-800 text-slate-300'
+                    : 'surface-chip text-slate-300'
               }`}
             >
               <ChartIcon size={12} strokeWidth={2.6} aria-hidden="true" />
@@ -412,7 +407,7 @@ export default function WeightProgressCard({
                       ? 'var(--color-amber-500)'
                       : 'var(--color-emerald-500)'
                   }
-                  stroke="var(--surface-1)"
+                  stroke="var(--app-card-bg)"
                   strokeWidth="1.6"
                 >
                   <title>
