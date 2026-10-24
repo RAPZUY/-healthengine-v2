@@ -418,3 +418,28 @@ export function scaleMealToTarget(meal, dailyTargetCalories, baseDailyCalories) 
     scaledHouseholdPortion,
   };
 }
+
+/**
+ * Total pengeluaran makan harian: penjumlahan eksak dari `priceEstimateIdr`
+ * keempat kartu yang tampil (sarapan, makan siang, jajan, makan malam).
+ * Dipakai bersama oleh kartu TOTAL HARI INI agar angka yang dijumlahkan
+ * persis sama dengan yang tercetak di tiap kartu.
+ */
+export function sumMealPriceEstimate(meals) {
+  if (!meals) return 0;
+
+  return Object.values(meals).reduce((total, meal) => {
+    const price = Number(meal?.priceEstimateIdr);
+    return total + (Number.isFinite(price) ? price : 0);
+  }, 0);
+}
+
+/**
+ * Satu formatter rupiah untuk kartu makanan dan total harian, supaya angka
+ * yang dijumlahkan selalu tercetak dengan format yang identik.
+ */
+export function formatRupiah(amount) {
+  const value = Number(amount);
+  return `Rp ${(Number.isFinite(value) ? value : 0).toLocaleString('id-ID')}`;
+}
+

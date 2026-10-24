@@ -303,6 +303,26 @@ html[data-accent]:not([data-accent="engine"]) .surface-card .accent-text {
   background: var(--app-card-control);
 }
 
+/* --------------------------------------------------------------------------
+   Contrast chip
+   Di dalam .surface-card, skala slate sengaja di-remap ke warna kartu. Badge
+   streak butuh kebalikannya: latar pekat gelap agar tetap tajam di atas kartu
+   pastel (pink, biru, mint). Kelas ini mengembalikan token slate/amber ke nilai
+   aslinya hanya untuk elemen badge tersebut.
+   -------------------------------------------------------------------------- */
+
+.contrast-chip {
+  --color-slate-950: #020617;
+  --color-slate-900: #0f172a;
+  --color-slate-800: #1e293b;
+  --color-slate-700: #334155;
+  --color-amber-400: #fbbf24;
+  --color-amber-300: #fcd34d;
+  border: 1px solid var(--color-slate-800);
+  background-color: var(--color-slate-950);
+  color: var(--color-amber-400);
+}
+
 .app-aurora {
   background: radial-gradient(
     ellipse at top,

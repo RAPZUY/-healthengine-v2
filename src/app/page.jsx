@@ -11,8 +11,10 @@ import {
   Home,
   LockKeyhole,
   Moon,
+  ReceiptText,
   RefreshCw,
   Sparkles,
+  Timer,
   Trophy,
   UserRound,
   UtensilsCrossed,
@@ -27,6 +29,8 @@ import {
   getLocalDateString,
   calculateWorkoutStreak,
   scaleMealToTarget,
+  sumMealPriceEstimate,
+  formatRupiah,
 } from '@/utils/healthCalculations';
 import { WEEKLY_MEALS, BASE_DAILY_CALORIES, DAILY_FRUITS } from '@/data/nutritionData';
 import { WORKOUT_SCHEDULE, EQUIPMENT_LIST } from '@/data/workoutData';
@@ -35,11 +39,13 @@ import MartialArtsSection from '@/components/MartialArtsSection';
 import RunningTrackerSection from '@/components/RunningTrackerSection';
 import WeightProgressCard from '@/components/WeightProgressCard';
 import InstallPwaBanner from '@/components/InstallPwaBanner';
+import UpdateBannerV42 from '@/components/UpdateBannerV42';
 import TodoCalendar from '@/components/ui/TodoCalendar';
 import ExpandableCard from '@/components/ui/ExpandableCard';
 import {
-  ExerciseAnatomyPanel,
+  ExerciseVectorPanel,
   ExercisePosturePanel,
+  ExerciseMuscleMapPanel,
 } from '@/components/ExerciseDetailPanel';
 import ThemeSwitcher, {
   ACCENTS,
@@ -56,7 +62,7 @@ import {
 } from '@/components/ui/motion-primitives';
 
 // Versi rilis tampilan — samakan dengan CACHE_NAME di public/sw.js.
-const APP_VERSION = '4.1';
+const APP_VERSION = '4.2';
 
 // Permukaan kartu V4: token semantik, bukan warna gelap hard-coded.
 const CARD_SURFACE = 'surface-card rounded-2xl';
@@ -165,6 +171,8 @@ function HealthEngine() {
   const [selectedDayName, setSelectedDayName] = useState(getTodayDayName());
   const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
   const [budgetTier, setBudgetTier] = useState('budget');
+  // Satu timer saja yang boleh menyala dalam satu waktu, di level induk.
+  const [activeTimer, setActiveTimer] = useState(null);
 
   // Modal state
   const [showBioModal, setShowBioModal] = useState(false);
@@ -248,6 +256,12 @@ function HealthEngine() {
     if (typeof window === 'undefined') return;
     window.scrollTo({ top: 0, left: 0 });
   }, [activeTab]);
+
+  // Timer yang ditinggal bersama kartunya tidak boleh mengunci gerakan lain.
+  useEffect(() => {
+    /* eslint-disable-next-line react-hooks/set-state-in-effect -- the guard must not outlive the card that owns it */
+    setActiveTimer(null);
+  }, [selectedDate, selectedDayName, workoutSubTab, activeTab]);
 
   // Apply the selected theme + accent to the document root.
   useEffect(() => {
@@ -488,6 +502,70 @@ function HealthEngine() {
     setRunningHistory((previous) => [entry, ...previous].slice(0, 30));
   };
 
+  // ==================== SINGLE-TIMER GUARD ====================
+  // Hanya satu timer yang boleh berjalan. Timer kedua ditolak, lalu pengguna
+  // diberi tahu timer mana yang masih menyala beserta sisa waktunya.
+  const handleTimerStart = useCallback(
+    ({ exerciseId, exerciseName, mode, duration, endAt }) => {
+      const now = Date.now();
+
+      if (activeTimer) {
+        const stillRunning = activeTimer.endTime > now;
+        if (stillRunning) {
+          const elapsedSeconds = Math.max(
+            0,
+            Math.floor((now - activeTimer.startedAt) / 1000)
+          );
+          const remainingSeconds = Math.max(
+            0,
+            Math.ceil((activeTimer.endTime - now) / 1000)
+          );
+
+          toast({
+            tone: 'warning',
+            text: `Timer ${activeTimer.exerciseName} sedang berjalan`,
+            description: `(${elapsedSeconds} detik telah berjalan, sisa ${remainingSeconds} detik). Selesaikan atau reset timer tersebut dulu!`,
+            icon: <Timer size={17} strokeWidth={2.2} />,
+            duration: 6500,
+          });
+          return false;
+        }
+      }
+
+      setActiveTimer({
+        exerciseId,
+        exerciseName,
+        mode,
+        duration,
+        startedAt: now,
+        endTime: endAt,
+        running: true,
+      });
+      return true;
+    },
+    [activeTimer, toast]
+  );
+
+  const handleTimerStop = useCallback((exerciseId) => {
+    setActiveTimer((previous) =>
+      previous && previous.exerciseId === exerciseId ? null : previous
+    );
+  }, []);
+
+  const handleTimerReset = useCallback((exerciseId) => {
+    setActiveTimer((previous) =>
+      previous && previous.exerciseId === exerciseId ? null : previous
+    );
+  }, []);
+
+  const handleTimerExtend = useCallback((exerciseId, endTime) => {
+    setActiveTimer((previous) =>
+      previous && previous.exerciseId === exerciseId
+        ? { ...previous, endTime }
+        : previous
+    );
+  }, []);
+
   const handleToggleWorkoutComplete = () => {
     const dateKey = selectedDate;
     const wasCompleted = completedSet.has(dateKey);
@@ -589,19 +667,6 @@ function HealthEngine() {
       return;
     }
 
-    if (item.type === 'nutrition') {
-      setActiveTab('meals');
-      toast({
-        tone: 'neutral',
-        text: 'Target nutrisi dibuka',
-        description: `${strategy.title} · ${strategy.targetCalories} kkal hari ini. Geser hari atau budget sesuai kebutuhanmu.`,
-        actionLabel: 'Lihat Menu Makanan',
-        onAction: () => setActiveTab('meals'),
-        icon: <UtensilsCrossed size={17} strokeWidth={2.2} />,
-      });
-      return;
-    }
-
     toast({
       tone: 'success',
       text: 'Hari pemulihan aktif',
@@ -666,6 +731,12 @@ function HealthEngine() {
     );
   }, [dayMeals]);
 
+  // Total harga dihitung dari angka yang sama yang dicetak di tiap kartu.
+  const dayTotalCost = useMemo(
+    () => sumMealPriceEstimate(dayMeals),
+    [dayMeals]
+  );
+
   const agendaItems = useMemo(() => {
     const dayData =
       WORKOUT_SCHEDULE.find((day) => day.day === selectedDayName) ||
@@ -697,8 +768,11 @@ function HealthEngine() {
     items.push({
       id: `nutrition-${selectedDate}`,
       type: 'nutrition',
-      title: `Nutrisi Harian: ${strategy.targetCalories} kkal`,
-      description: `${strategy.title} · Protein ${strategy.macros.proteinG}g · Karbo ${strategy.macros.carbsG}g · Lemak ${strategy.macros.fatG}g`,
+      title: `Target Nutrisi Harian: ${strategy.targetCalories} kkal`,
+      calories: strategy.targetCalories,
+      protein: strategy.macros.proteinG,
+      carbs: strategy.macros.carbsG,
+      fat: strategy.macros.fatG,
       completed: false,
     });
 
@@ -789,6 +863,9 @@ function HealthEngine() {
           {/* ==================== TAB 1: BERANDA ==================== */}
           {activeTab === 'home' && (
             <div className="space-y-5">
+              {/* Banner pengumuman rilis V4.2 — paling atas Beranda */}
+              <UpdateBannerV42 />
+
               <TodoCalendar
                 selectedDate={selectedDate}
                 onSelectDate={handleSelectDate}
@@ -798,14 +875,19 @@ function HealthEngine() {
                 weekStartsOn={1}
                 addTodoAction={
                   <div
-                    className="flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-orange-500/25 bg-orange-500/10 px-2 text-orange-400 sm:px-2.5"
+                    className="contrast-chip flex min-h-11 shrink-0 items-center gap-1 rounded-full px-2 font-bold shadow-sm sm:px-2.5"
                     title={`Streak latihan ${streak.streak} hari`}
                     aria-label={`Streak latihan ${streak.streak} hari`}
                   >
-                    <Flame size={14} strokeWidth={2.4} />
-                    <span className={`${UNIT_ROW} text-xs font-bold text-orange-300`}>
+                    <Flame
+                      size={14}
+                      strokeWidth={2.4}
+                      aria-hidden="true"
+                      className="text-amber-400"
+                    />
+                    <span className={`${UNIT_ROW} text-xs font-bold text-amber-400`}>
                       <RollingNumber value={streak.streak} />
-                      <span className="text-[11px] font-medium text-orange-300/80">
+                      <span className="text-[11px] font-medium text-amber-400/80">
                         Hari
                       </span>
                     </span>
@@ -1192,12 +1274,23 @@ function HealthEngine() {
                               }
                             >
                               <div className="space-y-5 pt-1">
-                                <ExerciseAnatomyPanel exercise={variation} />
+                                {/* 1. Vektor biomekanika 2 fase */}
+                                <ExerciseVectorPanel exercise={variation} />
+                                {/* 2. Kesalahan postur, tepat di bawah vektor */}
                                 <ExercisePosturePanel exercise={variation} />
+                                {/* 3. Peta anatomi otot aktif */}
+                                <ExerciseMuscleMapPanel exercise={variation} />
+                                {/* 4. Timer latihan & istirahat */}
                                 <ExerciseTimer
                                   key={variation.id}
                                   exercise={variation}
+                                  timerState={activeTimer}
+                                  onTimerStart={handleTimerStart}
+                                  onTimerStop={handleTimerStop}
+                                  onTimerReset={handleTimerReset}
+                                  onTimerExtend={handleTimerExtend}
                                 />
+                                {/* 5. Slider verifikasi */}
                                 <SwipeToVerify
                                   verified={verifiedForDate.includes(
                                     slotIndex
@@ -1622,7 +1715,7 @@ function HealthEngine() {
                               Estimasi Harga
                             </span>
                             <span className="mt-1 block font-mono text-base font-bold text-emerald-400">
-                              Rp {meal.priceEstimateIdr?.toLocaleString('id-ID')}
+                              {formatRupiah(meal.priceEstimateIdr)}
                             </span>
                           </div>
                           <div className="surface-inset rounded-xl p-3.5">
@@ -1699,40 +1792,57 @@ function HealthEngine() {
 
               {/* Daily Total */}
               {dayTotals && (
-                <div className={`${CARD_SURFACE} p-4 text-center`}>
-                  <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                    Total Hari Ini
-                  </span>
-                  <div className="mt-2 flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1 font-mono text-xs">
-                    <span className={UNIT_ROW}>
-                      <strong className="text-base font-bold text-slate-100">
-                        <RollingNumber value={dayTotals.calories} />
-                      </strong>
-                      <span className="text-[11px] font-medium text-slate-500">kkal</span>
+                <div className={`${CARD_SURFACE} p-4`}>
+                  <div className="text-center">
+                    <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Total Hari Ini
                     </span>
-                    <span className="h-3 w-px bg-slate-700" aria-hidden="true" />
-                    <span className={`${UNIT_ROW} text-blue-400`}>
-                      <span className="text-slate-500">P</span>
-                      <strong>
-                        <RollingNumber value={dayTotals.protein} />
-                      </strong>
-                      <span className="text-[11px] font-medium text-blue-400/75">g</span>
+                    <div className="mt-2 flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1 font-mono text-xs">
+                      <span className={UNIT_ROW}>
+                        <strong className="text-base font-bold text-slate-100">
+                          <RollingNumber value={dayTotals.calories} />
+                        </strong>
+                        <span className="text-[11px] font-medium text-slate-500">kkal</span>
+                      </span>
+                      <span className="h-3 w-px bg-slate-700" aria-hidden="true" />
+                      <span className={`${UNIT_ROW} text-blue-400`}>
+                        <span className="text-slate-500">P</span>
+                        <strong>
+                          <RollingNumber value={dayTotals.protein} />
+                        </strong>
+                        <span className="text-[11px] font-medium text-blue-400/75">g</span>
+                      </span>
+                      <span className="h-3 w-px bg-slate-700" aria-hidden="true" />
+                      <span className={`${UNIT_ROW} text-emerald-400`}>
+                        <span className="text-slate-500">K</span>
+                        <strong>
+                          <RollingNumber value={dayTotals.carbs} />
+                        </strong>
+                        <span className="text-[11px] font-medium text-emerald-400/75">g</span>
+                      </span>
+                      <span className="h-3 w-px bg-slate-700" aria-hidden="true" />
+                      <span className={`${UNIT_ROW} text-amber-400`}>
+                        <span className="text-slate-500">L</span>
+                        <strong>
+                          <RollingNumber value={dayTotals.fat} />
+                        </strong>
+                        <span className="text-[11px] font-medium text-amber-400/75">g</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-start justify-between gap-3 border-t border-[var(--app-card-border)] pt-3">
+                    <span className="inline-flex min-w-0 items-start gap-1.5 text-[11px] font-semibold leading-snug text-slate-400">
+                      <ReceiptText
+                        size={13}
+                        strokeWidth={2.4}
+                        aria-hidden="true"
+                        className="mt-0.5 shrink-0"
+                      />
+                      Total Estimasi Pengeluaran Hari Ini
                     </span>
-                    <span className="h-3 w-px bg-slate-700" aria-hidden="true" />
-                    <span className={`${UNIT_ROW} text-emerald-400`}>
-                      <span className="text-slate-500">K</span>
-                      <strong>
-                        <RollingNumber value={dayTotals.carbs} />
-                      </strong>
-                      <span className="text-[11px] font-medium text-emerald-400/75">g</span>
-                    </span>
-                    <span className="h-3 w-px bg-slate-700" aria-hidden="true" />
-                    <span className={`${UNIT_ROW} text-amber-400`}>
-                      <span className="text-slate-500">L</span>
-                      <strong>
-                        <RollingNumber value={dayTotals.fat} />
-                      </strong>
-                      <span className="text-[11px] font-medium text-amber-400/75">g</span>
+                    <span className="shrink-0 font-mono text-sm font-bold text-emerald-400">
+                      {formatRupiah(dayTotalCost)}
                     </span>
                   </div>
                 </div>

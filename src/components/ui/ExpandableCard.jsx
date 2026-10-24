@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { animate, motion, useMotionValue, useReducedMotion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { ChevronDown } from 'lucide-react';
 import { motionTokens } from '@/components/ui/motion-primitives';
 
@@ -9,6 +9,11 @@ import { motionTokens } from '@/components/ui/motion-primitives';
  * Kartu dengan lipatan inline (bukan modal). Header selalu terlihat, panel
  * konten memuai dengan tinggi terukur + kurva ease-out yang singkat supaya
  * terasa seperti kartu yang dibuka, bukan halaman yang melompat.
+ *
+ * Panel tertutup selalu `height: 0` + `overflow: hidden`, sehingga tidak ada
+ * ruang kosong tersisa di bawah daftar kartu. Tinggi natural diukur ulang
+ * lewat ResizeObserver, jadi isi yang berubah (mis. timer) tidak memotong
+ * konten atau meninggalkan celah.
  *
  * Catatan aksesibilitas: trigger utama adalah <button>, dan `headerAction`
  * dirender sebagai elemen saudara (bukan di dalam button) agar tombol aksi
@@ -33,8 +38,7 @@ export default function ExpandableCard({
   const isExpanded = isControlled ? expanded : internalExpanded;
   const reduce = useReducedMotion();
   const contentRef = useRef(null);
-  const measuredHeight = useRef(0);
-  const height = useMotionValue(0);
+  const [contentHeight, setContentHeight] = useState(0);
   const panelId = useId();
 
   const handleToggle = () => {
@@ -46,23 +50,13 @@ export default function ExpandableCard({
   };
 
   // Ukur tinggi natural konten dan ikuti perubahan ukuran (mis. teks membungkus
-  // ulang saat viewport berubah) tanpa mengunci tinggi ke nilai lama.
+  // ulang saat viewport berubah, atau timer yang berubah angka).
   useEffect(() => {
     const element = contentRef.current;
     if (!element) return undefined;
 
     const syncHeight = () => {
-      measuredHeight.current = element.getBoundingClientRect().height;
-      if (isExpanded) {
-        if (reduce) {
-          height.set(measuredHeight.current);
-        } else {
-          animate(height, measuredHeight.current, {
-            duration: motionTokens.duration.standard,
-            ease: motionTokens.ease.standard,
-          });
-        }
-      }
+      setContentHeight(element.getBoundingClientRect().height);
     };
 
     syncHeight();
@@ -78,21 +72,7 @@ export default function ExpandableCard({
       if (observer) observer.disconnect();
       window.removeEventListener('resize', syncHeight);
     };
-  }, [isExpanded, height, reduce]);
-
-  useEffect(() => {
-    if (reduce) {
-      height.set(isExpanded ? measuredHeight.current : 0);
-      return undefined;
-    }
-
-    const controls = animate(height, isExpanded ? measuredHeight.current : 0, {
-      duration: motionTokens.duration.standard,
-      ease: motionTokens.ease.standard,
-    });
-
-    return () => controls.stop();
-  }, [isExpanded, height, reduce]);
+  }, []);
 
   return (
     <div
@@ -136,10 +116,19 @@ export default function ExpandableCard({
 
       <motion.div
         id={panelId}
-        style={{ height }}
+        initial={false}
+        animate={{ height: isExpanded ? contentHeight : 0 }}
+        transition={
+          reduce
+            ? { duration: 0 }
+            : {
+                duration: motionTokens.duration.standard,
+                ease: motionTokens.ease.standard,
+              }
+        }
         aria-hidden={!isExpanded}
         inert={!isExpanded ? true : undefined}
-        className="overflow-hidden"
+        style={{ overflow: 'hidden', minHeight: 0 }}
       >
         <div
           ref={contentRef}

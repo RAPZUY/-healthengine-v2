@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   BellRing,
@@ -60,8 +60,21 @@ function beepPattern(context) {
  * Timestamp-driven workout / rest timer. It stores the end wall-clock time, so
  * a dimmed or throttled phone still returns to the correct remaining seconds.
  * The completion cue is a synthesised WebAudio beep, no audio asset needed.
+ *
+ * Single-timer guard: the parent owns `timerState` ({ exerciseId, mode, endAt,
+ * running }) and passes `onTimerStart` / `onTimerStop`. When another exercise
+ * already owns the only running timer, `onTimerStart` returns false and this
+ * component refuses to start a second one.
  */
-export default function ExerciseTimer({ exercise, className = '' }) {
+export default function ExerciseTimer({
+  exercise,
+  className = '',
+  timerState = null,
+  onTimerStart,
+  onTimerStop,
+  onTimerReset,
+  onTimerExtend,
+}) {
   const { rest, work } = parseExerciseTimers(exercise);
   const initialMode = work ? 'work' : 'rest';
   const initialDuration = work ?? rest ?? 0;
@@ -70,12 +83,26 @@ export default function ExerciseTimer({ exercise, className = '' }) {
   const reduce = useReducedMotion();
   const [mode, setMode] = useState(initialMode);
   const [remaining, setRemaining] = useState(initialDuration);
-  const [running, setRunning] = useState(false);
+  const [localRunning, setLocalRunning] = useState(false);
   const endAtRef = useRef(0);
   const notifiedRef = useRef(false);
   const audioRef = useRef(null);
 
-  const duration = mode === 'work' ? work ?? 0 : rest ?? 0;
+  const exerciseId = exercise?.id ?? exercise?.name ?? 'exercise';
+  const isOwner = Boolean(
+    timerState && timerState.exerciseId === exerciseId
+  );
+  // Saat induk memasang guard, hanya timer pemilik yang boleh berstatus jalan.
+  // Tanpa guard (pemakaian mandiri), state lokal yang menentukan.
+  const guarded = typeof onTimerStart === 'function';
+  const running = guarded
+    ? isOwner && Boolean(timerState?.running)
+    : localRunning;
+  // Saat komponen ini pemilik timer, mode mengikuti state induk supaya
+  // label dan durasi tidak pernah berbeda dengan timer yang benar-benar jalan.
+  const activeMode = isOwner && timerState?.mode ? timerState.mode : mode;
+
+  const duration = activeMode === 'work' ? work ?? 0 : rest ?? 0;
   const hasBoth = Boolean(work) && Boolean(rest);
   const clock = formatClock(remaining);
   const progress =
@@ -94,6 +121,18 @@ export default function ExerciseTimer({ exercise, className = '' }) {
     }
   };
 
+  const stopLocalTimer = useCallback(() => {
+    setLocalRunning(false);
+    onTimerStop?.(exerciseId);
+  }, [exerciseId, onTimerStop]);
+
+  // Ambil timestamp akhir dari induk saat gerakan ini pemilik timer. Hanya
+  // menulis ref, jadi tidak memicu render tambahan.
+  useEffect(() => {
+    if (!isOwner || !timerState) return;
+    endAtRef.current = timerState.endTime ?? 0;
+  }, [isOwner, timerState]);
+
   // Count down against a timestamp, never against an accumulated tick count.
   useEffect(() => {
     if (!running) return undefined;
@@ -106,7 +145,8 @@ export default function ExerciseTimer({ exercise, className = '' }) {
       setRemaining(next);
 
       if (next <= 0) {
-        setRunning(false);
+        setLocalRunning(false);
+        onTimerStop?.(exerciseId);
         if (!notifiedRef.current) {
           notifiedRef.current = true;
           if (audioRef.current) {
@@ -118,11 +158,11 @@ export default function ExerciseTimer({ exercise, className = '' }) {
           toast({
             tone: 'success',
             text:
-              mode === 'work'
+              activeMode === 'work'
                 ? 'Waktu latihan selesai!'
                 : 'Waktu istirahat selesai!',
             description:
-              mode === 'work'
+              activeMode === 'work'
                 ? 'Istirahat sejenak, lalu lanjutkan set berikutnya.'
                 : 'Siap untuk set berikutnya.',
             icon: <BellRing size={17} strokeWidth={2.2} />,
@@ -135,7 +175,7 @@ export default function ExerciseTimer({ exercise, className = '' }) {
     tick();
     const interval = setInterval(tick, 250);
     return () => clearInterval(interval);
-  }, [running, mode, toast]);
+  }, [running, activeMode, toast, exerciseId, onTimerStop]);
 
   useEffect(
     () => () => {
@@ -150,11 +190,26 @@ export default function ExerciseTimer({ exercise, className = '' }) {
   const handleStart = () => {
     const base = remaining > 0 ? remaining : duration;
     if (base <= 0) return;
+
+    const endAt = Date.now() + base * 1000;
+    const allowed = onTimerStart
+      ? onTimerStart({
+          exerciseId,
+          exerciseName: exercise?.name ?? 'Gerakan',
+          mode: activeMode,
+          duration: base,
+          endAt,
+        })
+      : true;
+
+    if (!allowed) return;
+
     ensureAudio();
     notifiedRef.current = false;
-    endAtRef.current = Date.now() + base * 1000;
+    endAtRef.current = endAt;
+    setMode(activeMode);
     setRemaining(base);
-    setRunning(true);
+    setLocalRunning(true);
   };
 
   const handlePause = () => {
@@ -163,26 +218,30 @@ export default function ExerciseTimer({ exercise, className = '' }) {
       Math.ceil((endAtRef.current - Date.now()) / 1000)
     );
     setRemaining(next);
-    setRunning(false);
+    stopLocalTimer();
   };
 
   const handleReset = () => {
-    setRunning(false);
+    stopLocalTimer();
     notifiedRef.current = false;
     endAtRef.current = 0;
     setRemaining(duration);
+    onTimerReset?.(exerciseId);
   };
 
   const handleAddTime = () => {
     const next = (remaining > 0 ? remaining : duration) + 15;
     setRemaining(next);
-    if (running) endAtRef.current += 15000;
+    if (running) {
+      endAtRef.current += 15000;
+      onTimerExtend?.(exerciseId, endAtRef.current);
+    }
   };
 
   const handleMode = (nextMode) => {
-    if (nextMode === mode) return;
+    if (nextMode === activeMode) return;
     const nextDuration = nextMode === 'work' ? work ?? 0 : rest ?? 0;
-    setRunning(false);
+    stopLocalTimer();
     notifiedRef.current = false;
     endAtRef.current = 0;
     setMode(nextMode);
@@ -220,9 +279,9 @@ export default function ExerciseTimer({ exercise, className = '' }) {
             <button
               type="button"
               onClick={() => handleMode('work')}
-              aria-pressed={mode === 'work'}
+              aria-pressed={activeMode === 'work'}
               className={`flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition-colors ${
-                mode === 'work'
+                activeMode === 'work'
                   ? 'accent-pill'
                   : 'text-slate-400 hover:text-slate-100'
               }`}
@@ -233,9 +292,9 @@ export default function ExerciseTimer({ exercise, className = '' }) {
             <button
               type="button"
               onClick={() => handleMode('rest')}
-              aria-pressed={mode === 'rest'}
+              aria-pressed={activeMode === 'rest'}
               className={`flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition-colors ${
-                mode === 'rest'
+                activeMode === 'rest'
                   ? 'accent-pill'
                   : 'text-slate-400 hover:text-slate-100'
               }`}
@@ -246,7 +305,7 @@ export default function ExerciseTimer({ exercise, className = '' }) {
           </div>
         ) : (
           <span className="accent-pill rounded-lg px-2.5 py-1 text-[11px] font-bold">
-            {mode === 'work' ? 'Latihan' : 'Istirahat'}
+            {activeMode === 'work' ? 'Latihan' : 'Istirahat'}
           </span>
         )}
       </div>
@@ -272,7 +331,7 @@ export default function ExerciseTimer({ exercise, className = '' }) {
               ? 'Berjalan, layar boleh meredup'
               : remaining === 0
                 ? 'Selesai, siap set berikutnya'
-                : mode === 'work'
+                : activeMode === 'work'
                   ? 'Durasi kerja per set'
                   : 'Durasi istirahat antar set'}
           </p>

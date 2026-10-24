@@ -21,6 +21,8 @@ import {
   ChevronRight,
   ChevronUp,
   Sparkles,
+  Target,
+  XCircle,
 } from 'lucide-react';
 import { AutoHeight, MorphingText } from './motion-primitives';
 
@@ -197,6 +199,16 @@ export default function TodoCalendar({
   const cellRefs = useRef(new Map());
 
   const todayKey = toDateKey(new Date());
+  const todayDate = useMemo(() => startOfDay(new Date()), []);
+  const isPastDay = selected < todayDate;
+
+  // Nutrisi bukan lagi tugas yang bisa dicentang: hanya olahraga/istirahat yang
+  // dihitung sebagai agenda aktif.
+  const activeTaskCount = useMemo(
+    () => items.filter((item) => item.type !== 'nutrition').length,
+    [items]
+  );
+
   const selectedDateLabel = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
@@ -470,7 +482,7 @@ export default function TodoCalendar({
             <Sparkles size={14} className="text-blue-400" />
             Agenda
             <span className="surface-chip rounded-full px-1.5 py-0.5 text-xs font-mono text-slate-400">
-              {items.length}
+              {activeTaskCount}
             </span>
           </h3>
           <span className="truncate text-xs text-slate-400">
@@ -486,61 +498,137 @@ export default function TodoCalendar({
             </div>
           ) : (
             <div className="space-y-2">
-              {items.map((item, index) => (
-                <motion.button
-                  key={item.id ?? `${selectedKey}-${index}`}
-                  type="button"
-                  onClick={() => onItemClick?.(item)}
-                  initial={
-                    reduce ? { opacity: 0 } : { opacity: 0, y: 6 }
-                  }
-                  animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                  transition={{
-                    duration: 0.18,
-                    delay: index * 0.04,
-                    ease: [0.16, 1, 0.3, 1],
-                  }}
-                  className="surface-inset flex min-h-11 w-full items-start gap-3 rounded-2xl p-3 text-left transition hover:border-slate-600 active:scale-[0.995]"
-                >
-                  <span
-                    className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
-                      item.completed
-                        ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-400'
-                        : 'surface-chip text-transparent'
-                    }`}
-                    aria-hidden="true"
-                  >
-                    {item.completed ? (
-                      <Check size={14} strokeWidth={3} />
-                    ) : null}
-                  </span>
-
-                  <span className="min-w-0 flex-1">
-                    <span
-                      className={`block text-sm font-semibold leading-snug ${
-                        item.completed
-                          ? 'text-slate-500 line-through'
-                          : 'text-slate-100'
-                      }`}
+              {items.map((item, index) => {
+                if (item.type === 'nutrition') {
+                  return (
+                    <motion.div
+                      key={item.id ?? `nutrition-${selectedKey}`}
+                      initial={
+                        reduce ? { opacity: 0 } : { opacity: 0, y: 6 }
+                      }
+                      animate={
+                        reduce ? { opacity: 1 } : { opacity: 1, y: 0 }
+                      }
+                      transition={{
+                        duration: 0.18,
+                        delay: index * 0.04,
+                        ease: [0.16, 1, 0.3, 1],
+                      }}
+                      className="surface-inset rounded-2xl p-3"
                     >
-                      {item.title}
+                      <div className="flex items-start gap-3">
+                        <span
+                          className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400"
+                          aria-hidden="true"
+                        >
+                          <Target size={14} strokeWidth={2.6} />
+                        </span>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold leading-snug text-slate-100">
+                            Target Nutrisi Harian:{' '}
+                            <span className="font-mono font-bold">
+                              {item.calories} kkal
+                            </span>
+                          </p>
+                          <p className="mt-1 font-mono text-xs leading-relaxed text-slate-400">
+                            Protein {item.protein}g
+                            <span aria-hidden="true" className="px-1.5 text-slate-600">
+                              ·
+                            </span>
+                            Karbo {item.carbs}g
+                            <span aria-hidden="true" className="px-1.5 text-slate-600">
+                              ·
+                            </span>
+                            Lemak {item.fat}g
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                }
+
+                const missed =
+                  item.type === 'workout' && isPastDay && !item.completed;
+
+                return (
+                  <motion.button
+                    key={item.id ?? `${selectedKey}-${index}`}
+                    type="button"
+                    onClick={() => onItemClick?.(item)}
+                    initial={
+                      reduce ? { opacity: 0 } : { opacity: 0, y: 6 }
+                    }
+                    animate={
+                      reduce ? { opacity: 1 } : { opacity: 1, y: 0 }
+                    }
+                    transition={{
+                      duration: 0.18,
+                      delay: index * 0.04,
+                      ease: [0.16, 1, 0.3, 1],
+                    }}
+                    className={`surface-inset flex min-h-11 w-full items-start gap-3 rounded-2xl p-3 text-left transition active:scale-[0.995] ${
+                      missed
+                        ? 'border-rose-500/40 hover:border-rose-500/60'
+                        : 'hover:border-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
+                        missed
+                          ? 'border-rose-500/60 bg-rose-500/15 text-rose-400'
+                          : item.completed
+                            ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-400'
+                            : 'surface-chip text-transparent'
+                      }`}
+                      aria-hidden="true"
+                    >
+                      {missed ? (
+                        <XCircle size={15} strokeWidth={3} />
+                      ) : item.completed ? (
+                        <Check size={14} strokeWidth={3} />
+                      ) : null}
                     </span>
-                    {item.description ? (
+
+                    <span className="min-w-0 flex-1">
                       <span
-                        className={`mt-0.5 block text-xs leading-relaxed ${
-                          item.completed ? 'text-slate-600' : 'text-slate-400'
+                        className={`block text-sm font-semibold leading-snug ${
+                          missed
+                            ? 'text-slate-200 line-through opacity-75'
+                            : item.completed
+                              ? 'text-slate-500 line-through'
+                              : 'text-slate-100'
                         }`}
                       >
-                        {item.description}
+                        {item.title}
                       </span>
-                    ) : null}
-                  </span>
+                      {missed ? (
+                        <span className="mt-0.5 block text-xs font-medium leading-relaxed text-rose-400">
+                          Kamu tidak melakukan olahraga di hari ini. Jangan
+                          biarkan terulang, tebus di latihan berikutnya!
+                        </span>
+                      ) : item.description ? (
+                        <span
+                          className={`mt-0.5 block text-xs leading-relaxed ${
+                            item.completed ? 'text-slate-600' : 'text-slate-400'
+                          }`}
+                        >
+                          {item.description}
+                        </span>
+                      ) : null}
+                    </span>
 
-                  <span className="mt-1 shrink-0 text-slate-600" aria-hidden="true">
-                    <ChevronRight size={15} />
-                  </span>
-                </motion.button>
-              ))}
+                    <span
+                      className={`mt-1 shrink-0 ${
+                        missed ? 'text-rose-400' : 'text-slate-600'
+                      }`}
+                      aria-hidden="true"
+                    >
+                      <ChevronRight size={15} />
+                    </span>
+                  </motion.button>
+                );
+              })}
             </div>
           )}
         </AutoHeight>
