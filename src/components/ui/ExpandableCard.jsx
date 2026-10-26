@@ -128,7 +128,16 @@ export default function ExpandableCard({
         }
         aria-hidden={!isExpanded}
         inert={!isExpanded ? true : undefined}
-        style={{ overflow: 'hidden', minHeight: 0 }}
+        style={{
+          overflow: 'hidden',
+          minHeight: 0,
+          marginTop: 0,
+          marginBottom: 0,
+          // Tanpa containment, isi panel setinggi ~1650px tetap dihitung
+          // sebagai scrollable overflow leluhur walau kotaknya 0px. Itu yang
+          // dulu memunculkan ruang kosong panjang di bawah kartu terakhir.
+          contain: 'layout paint',
+        }}
       >
         <div
           ref={contentRef}

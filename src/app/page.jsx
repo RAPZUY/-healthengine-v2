@@ -56,13 +56,17 @@ import SwipeToVerify from '@/components/ui/SwipeToVerify';
 import ExerciseTimer from '@/components/ui/ExerciseTimer';
 import { ToastProvider, useToast } from '@/components/ui/ToastProvider';
 import {
+  USER_NAME_PATTERN,
+  sanitizeUserName,
+} from '@/utils/userName';
+import {
   motionTokens,
   MorphingText,
   RollingNumber,
 } from '@/components/ui/motion-primitives';
 
 // Versi rilis tampilan — samakan dengan CACHE_NAME di public/sw.js.
-const APP_VERSION = '4.2';
+const APP_VERSION = '4.2.1';
 
 // Permukaan kartu V4: token semantik, bukan warna gelap hard-coded.
 const CARD_SURFACE = 'surface-card rounded-2xl';
@@ -98,6 +102,65 @@ function getWeekDates() {
       isToday: getLocalDateString(date) === getLocalDateString(today),
     };
   });
+}
+
+// Sapaan Beranda mengikuti jam perangkat, bukan jam server.
+function getGreeting(name) {
+  const hour = new Date().getHours();
+  const call = name ? `, ${name}` : '';
+
+  if (hour >= 5 && hour < 11) {
+    return {
+      title: `Halo${call} 👋`,
+      subtitle: 'Pagi cerah. Isi bahan bakar dulu, lalu gerak sebentar.',
+    };
+  }
+  if (hour >= 11 && hour < 15) {
+    return {
+      title: `Halo${call} 👋`,
+      subtitle: 'Siang. Jaga ritme makan dan jangan lewatkan latihan.',
+    };
+  }
+  if (hour >= 15 && hour < 19) {
+    return {
+      title: `Halo${call} 👋`,
+      subtitle: 'Sore. Otot masih punya tenaga, pakai sebelum malam.',
+    };
+  }
+  return {
+    title: `Halo${call} 👋`,
+    subtitle: 'Malam. Tutup hari dengan hidrasi cukup dan tidur cukup.',
+  };
+}
+
+// Teguran gaul untuk Dynamic Island. Empat jendela waktu, satu nada: ramah,
+// tidak menghakimi, dan selalu menunjuk satu aksi (buka Tab Olahraga).
+function getWorkoutNudge(name) {
+  const hour = new Date().getHours();
+  const call = name ? ` ${name}` : '';
+
+  if (hour >= 5 && hour < 11) {
+    return {
+      title: name ? `☀️ Eh${call}, belum olahraga nih!` : '☀️ Eh, belum olahraga nih!',
+      body: 'Pagi-pagi udah cek menu makan aja nih. Gerak tipis-tipis dulu yuk di Tab Olahraga biar sarapannya makin mantap!',
+    };
+  }
+  if (hour >= 11 && hour < 15) {
+    return {
+      title: name ? `🔥${call}, sikat latihan dulu yuk!` : '🔥 Sikat latihan dulu yuk!',
+      body: 'Menu makan siang emang menggoda sih, tapi jadwal ototmu hari ini belum disentuh lho. Gas kelarin dulu!',
+    };
+  }
+  if (hour >= 15 && hour < 19) {
+    return {
+      title: name ? `⚡ Sore${call}, otot nungguin nih!` : '⚡ Sore, otot nungguin nih!',
+      body: 'Jam segini waktu paling pas buat keringetan sebelum makan sore. Yuk tuntasin gerakan hari ini!',
+    };
+  }
+  return {
+    title: name ? `🌙${call}, utang keringet hari ini!` : '🌙 Utang keringet hari ini!',
+    body: 'Udah malem nih, jangan cuma ngintip kalori makanan doang. Sempetin olahraga bentar yuk sebelum rebahan!',
+  };
 }
 
 // Kamus pemetaan label otot Bahasa Indonesia
@@ -140,6 +203,119 @@ const NAV_TABS = [
   { id: 'meals', label: 'Makanan', icon: UtensilsCrossed },
 ];
 
+/**
+ * Kartu perkenalan inline di Beranda. Hanya muncul saat nama belum tersimpan,
+ * jadi tidak menambah satu langkah pun bagi pengguna lama.
+ */
+function UserNameCard({ onSave }) {
+  const [draft, setDraft] = useState('');
+  const valid = USER_NAME_PATTERN.test(draft);
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (!valid) return;
+    onSave(draft);
+  };
+
+  return (
+    <section className={`${CARD_SURFACE} p-5`} aria-labelledby="user-name-title">
+      <div className="flex items-start gap-3">
+        <span
+          aria-hidden="true"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/10 text-blue-400"
+        >
+          <UserRound size={16} strokeWidth={2.2} />
+        </span>
+        <div className="min-w-0">
+          <h1
+            id="user-name-title"
+            className="text-sm font-bold text-slate-100"
+          >
+            Kenalan dulu, yuk
+          </h1>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">
+            Isi nama panggilan biar sapaan Beranda terasa seperti milikmu
+            sendiri. Cukup 3-6 huruf, tanpa spasi atau angka.
+          </p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="mt-4 space-y-2">
+        <label
+          htmlFor="user-name-input"
+          className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500"
+        >
+          Nama panggilan
+        </label>
+
+        <div className="flex items-stretch gap-2">
+          <input
+            id="user-name-input"
+            type="text"
+            value={draft}
+            onChange={(event) =>
+              setDraft(sanitizeUserName(event.target.value))
+            }
+            maxLength={6}
+            autoComplete="off"
+            autoCapitalize="words"
+            spellCheck={false}
+            placeholder="Raka"
+            aria-describedby="user-name-help"
+            className="surface-inset min-h-11 w-full min-w-0 flex-1 rounded-xl px-3 text-base font-semibold text-slate-100 placeholder:font-normal placeholder:text-slate-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+          />
+          <button
+            type="submit"
+            disabled={!valid}
+            className="accent-solid min-h-11 min-w-11 shrink-0 rounded-xl px-4 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Simpan
+          </button>
+        </div>
+
+        <p
+          id="user-name-help"
+          aria-live="polite"
+          className={`text-[11px] ${
+            draft.length > 0 && !valid ? 'text-amber-400' : 'text-slate-500'
+          }`}
+        >
+          {draft.length === 0
+            ? 'Huruf saja, 3-6 karakter.'
+            : draft.length < 3
+              ? `Kurang ${3 - draft.length} huruf lagi.`
+              : `${draft.length}/6 huruf. Siap disimpan.`}
+        </p>
+      </form>
+    </section>
+  );
+}
+
+/** Sapaan utama Beranda; jam perangkat menentukan nada kalimatnya. */
+function GreetingCard({ userName }) {
+  const greeting = getGreeting(userName);
+  const initial = userName.slice(0, 1).toUpperCase();
+
+  return (
+    <section className="flex items-center gap-3 px-1">
+      <span
+        aria-hidden="true"
+        className="accent-solid flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-base font-bold shadow-sm"
+      >
+        {initial}
+      </span>
+      <div className="min-w-0">
+        <h1 className="truncate text-lg font-bold leading-tight text-slate-100">
+          {greeting.title}
+        </h1>
+        <p className="mt-0.5 text-xs leading-snug text-slate-400">
+          {greeting.subtitle}
+        </p>
+      </div>
+    </section>
+  );
+}
+
 export default function HealthAppPage() {
   return (
     <ToastProvider position="top-center">
@@ -155,6 +331,7 @@ function HealthEngine() {
   // Core state
   const [isLoaded, setIsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
+  const [userName, setUserName] = useState('');
   const [workoutSubTab, setWorkoutSubTab] = useState('muscle'); // 'muscle' | 'martial' | 'running'
   const [activeExerciseSlot, setActiveExerciseSlot] = useState(null);
   const [activeMealIndex, setActiveMealIndex] = useState(null);
@@ -199,6 +376,7 @@ function HealthEngine() {
         setAccentId(nextAccent);
         applyThemeToDocument(nextTheme, nextAccent);
         if (parsed.bio) setBio({ ...DEFAULT_BIO, ...parsed.bio });
+        if (parsed.userName) setUserName(sanitizeUserName(parsed.userName));
         if (parsed.ownedEquipment) setOwnedEquipment(parsed.ownedEquipment);
         if (parsed.completedDates) setCompletedDates(parsed.completedDates);
         if (parsed.swappedSlots) setSwappedSlots(parsed.swappedSlots);
@@ -278,6 +456,7 @@ function HealthEngine() {
         JSON.stringify({
           themeMode,
           accentId,
+          userName,
           bio,
           ownedEquipment,
           completedDates,
@@ -295,6 +474,7 @@ function HealthEngine() {
   }, [
     themeMode,
     accentId,
+    userName,
     bio,
     ownedEquipment,
     completedDates,
@@ -346,6 +526,17 @@ function HealthEngine() {
     () => calculateWorkoutStreak(completedDates),
     [completedDates]
   );
+
+  // Jadwal hari ini (bukan tanggal yang sedang dipilih di kalender) dipakai
+  // untuk menentukan apakah teguran olahraga perlu muncul saat buka Tab Makanan.
+  const todayWorkout = useMemo(
+    () =>
+      WORKOUT_SCHEDULE.find((day) => day.day === getTodayDayName()) ||
+      WORKOUT_SCHEDULE[0],
+    []
+  );
+  const isTodayWorkoutDone = completedSet.has(todayStr);
+  const needsWorkoutNudge = !todayWorkout.isRestDay && !isTodayWorkoutDone;
 
   // Current day workout
   const currentDayData = useMemo(() => {
@@ -423,7 +614,13 @@ function HealthEngine() {
   );
 
   const handleBioSave = (newBio) => {
-    setBio(newBio);
+    const { userName: nextName, ...nextBio } = newBio;
+    setBio(nextBio);
+    if (nextName === '') {
+      setUserName('');
+    } else if (typeof nextName === 'string' && USER_NAME_PATTERN.test(nextName)) {
+      setUserName(nextName);
+    }
     // Upsert weight history
     const today = getLocalDateString();
     setWeightHistory((previous) => {
@@ -436,6 +633,19 @@ function HealthEngine() {
       return [...previous, { date: today, weight: newBio.weightKg }];
     });
     setShowBioModal(false);
+  };
+
+  const handleSaveUserName = (value) => {
+    const clean = sanitizeUserName(value);
+    if (!USER_NAME_PATTERN.test(clean)) return;
+    setUserName(clean);
+    toast({
+      tone: 'success',
+      text: `Siap, ${clean}!`,
+      description:
+        'Nama panggilan tersimpan di perangkat ini. Sapaan Beranda akan pakai nama itu.',
+      duration: 4200,
+    });
   };
 
   const handleSwapVariation = (dayName, slotIndex, slot) => {
@@ -642,6 +852,32 @@ function HealthEngine() {
     });
   };
 
+  // Satu Dynamic Island untuk semua teguran olahraga. Kapsul dulu, detail
+  // dibuka pengguna; tombol aksi membawa mereka ke Tab Olahraga.
+  const showWorkoutIsland = useCallback(() => {
+    const nudge = getWorkoutNudge(userName);
+    toast({
+      id: 'workout-nudge',
+      island: true,
+      tone: 'warning',
+      collapsedText: nudge.title,
+      text: nudge.title,
+      description: nudge.body,
+      icon: <Dumbbell size={17} strokeWidth={2.2} />,
+      actionLabel: '🏋️ Gas ke Tab Olahraga',
+      onAction: () => setActiveTab('workout'),
+      duration: 9000,
+    });
+  }, [toast, userName]);
+
+  // Buka Tab Makanan padahal latihan hari ini belum tuntas: teguran muncul
+  // sekali setiap kali tab itu dibuka, dan hilang sendiri kalau latihan sudah
+  // dicatat selesai.
+  useEffect(() => {
+    if (!isLoaded || activeTab !== 'meals' || !needsWorkoutNudge) return;
+    showWorkoutIsland();
+  }, [activeTab, isLoaded, needsWorkoutNudge, showWorkoutIsland]);
+
   const handleAgendaItemClick = (item) => {
     if (item.type === 'workout') {
       if (isSelectedDateCompleted) {
@@ -654,11 +890,17 @@ function HealthEngine() {
         return;
       }
 
-      setActiveTab('workout');
+      // Teguran bergaya hari ini hanya untuk tanggal hari ini; tanggal lain
+      // tetap dapat notifikasi biasa supaya salinan waktunya tidak menyesatkan.
+      if (selectedDate === todayStr) {
+        showWorkoutIsland();
+        return;
+      }
+
       toast({
         tone: 'warning',
         text: 'Selesaikan latihan dulu',
-        description: `${currentDayData.title} (${currentDayData.duration}) menunggu. Ketuk notifikasi ini untuk langsung membuka Tab Olahraga.`,
+        description: `${currentDayData.title} (${currentDayData.duration}) untuk ${selectedDayName} belum tercatat selesai.`,
         actionLabel: 'Buka Tab Olahraga',
         onAction: () => setActiveTab('workout'),
         icon: <Dumbbell size={17} strokeWidth={2.2} />,
@@ -805,7 +1047,7 @@ function HealthEngine() {
 
   // ==================== RENDER ====================
   return (
-    <div className="relative min-h-dvh overflow-x-hidden bg-slate-950 text-slate-100">
+    <div className="relative min-h-dvh overflow-x-clip bg-slate-950 text-slate-100">
       {/* Aksen cahaya lembut di latar atas — satu sumber cahaya, bukan glow di setiap kartu. */}
       <div
         aria-hidden="true"
@@ -863,6 +1105,13 @@ function HealthEngine() {
           {/* ==================== TAB 1: BERANDA ==================== */}
           {activeTab === 'home' && (
             <div className="space-y-5">
+              {/* Sapaan atau kartu perkenalan, keduanya di paling atas Beranda */}
+              {userName ? (
+                <GreetingCard userName={userName} />
+              ) : (
+                <UserNameCard onSave={handleSaveUserName} />
+              )}
+
               {/* Banner pengumuman rilis V4.2 — paling atas Beranda */}
               <UpdateBannerV42 />
 
@@ -1895,6 +2144,7 @@ function HealthEngine() {
       {showBioModal && (
         <BiometricModal
           biometrics={bio}
+          userName={userName}
           onSave={handleBioSave}
           onClose={() => setShowBioModal(false)}
         />

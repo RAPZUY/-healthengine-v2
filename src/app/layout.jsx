@@ -20,7 +20,7 @@ export const viewport = {
 };
 
 export const metadata = {
-  title: "HealthEngine V4.2 — Kalkulator Kesehatan, Latihan & Lari",
+  title: "HealthEngine V4.2.1 — Kalkulator Kesehatan, Latihan & Lari",
   description:
     "Kalkulator BMI, target nutrisi, program latihan mingguan, timer istirahat, verifikasi gerakan, dan pencatat lari dengan tema gelap/terang serta aksen pastel.",
   appleWebApp: {

@@ -2,13 +2,15 @@
 
 import React, { useCallback, useSyncExternalStore } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { CalendarX2, Palette, ReceiptText, Timer, X } from 'lucide-react';
+import { BellRing, CalendarX2, Palette, ReceiptText, Timer, UserRound, X } from 'lucide-react';
 import { motionTokens } from '@/components/ui/motion-primitives';
 
-const STORAGE_KEY = 'healthengine_banner_v4_2';
+const STORAGE_KEY = 'healthengine_banner_v4_2_1';
 const DISMISSED = 'dismissed';
 
 const HIGHLIGHTS = [
+  { icon: UserRound, label: 'Sapaan nama panggilan' },
+  { icon: BellRing, label: 'Dynamic Island bisa diklik' },
   { icon: Palette, label: 'Tema pastel penuh' },
   { icon: CalendarX2, label: 'Evaluasi hari terlewat' },
   { icon: Timer, label: 'Proteksi timer tunggal' },
@@ -35,7 +37,7 @@ function readDismissed() {
 }
 
 /**
- * Pengumuman rilis V4.2. Muncul sekali per perangkat; tombol tutup menulis
+ * Pengumuman rilis V4.2.1. Muncul sekali per perangkat; tombol tutup menulis
  * flag ke localStorage sehingga banner tidak kembali pada kunjungan berikutnya.
  */
 export default function UpdateBannerV42() {
@@ -76,7 +78,7 @@ export default function UpdateBannerV42() {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="accent-pill rounded-md px-1.5 py-0.5 font-mono text-[11px] font-bold">
-              V4.2
+              V4.2.1
             </span>
             <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
               Baru di perangkat ini
@@ -87,11 +89,11 @@ export default function UpdateBannerV42() {
             id="update-banner-title"
             className="mt-1.5 text-sm font-bold leading-snug text-slate-100"
           >
-            🚀 Major Update HealthEngine V4.2
+            🚀 Minor Update HealthEngine V4.2.1
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-slate-400">
-            Tema pastel penuh, evaluasi hari terlewat, proteksi timer tunggal,
-            dan kalkulator total pengeluaran makan harian.
+            Sapaan nama panggilan, Dynamic Island yang bisa dibuka, dan ruang
+            kosong di bawah Tab Olahraga sudah rapi.
           </p>
 
           <ul className="mt-2.5 flex flex-wrap gap-1.5">
@@ -115,7 +117,7 @@ export default function UpdateBannerV42() {
         <button
           type="button"
           onClick={handleDismiss}
-          aria-label="Tutup pengumuman pembaruan V4.2"
+          aria-label="Tutup pengumuman pembaruan V4.2.1"
           className="surface-chip flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
         >
           <X size={16} strokeWidth={2.4} aria-hidden="true" />

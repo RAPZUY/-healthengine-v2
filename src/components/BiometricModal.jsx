@@ -6,6 +6,7 @@ import { Activity, Ruler, Scale, Target, UserRound, X } from 'lucide-react';
 import NumberInput from '@/components/ui/NumberInput';
 import { motionTokens } from '@/components/ui/motion-primitives';
 import { useToast } from '@/components/ui/ToastProvider';
+import { USER_NAME_PATTERN, sanitizeUserName } from '@/utils/userName';
 
 const ACTIVITY_OPTIONS = [
   { multiplier: 1.2, title: 'Hampir Nggak Pernah Olahraga', desc: 'Rebahan / duduk seharian' },
@@ -21,10 +22,16 @@ const STRATEGY_OPTIONS = [
   { id: 'cutting', label: 'Cutting', activeClass: 'bg-rose-600 text-white' },
 ];
 
-export default function BiometricModal({ biometrics, onSave, onClose }) {
+export default function BiometricModal({
+  biometrics,
+  userName = '',
+  onSave,
+  onClose,
+}) {
   const reduce = useReducedMotion();
   const { toast } = useToast();
 
+  const [name, setName] = useState(sanitizeUserName(userName));
   const [gender, setGender] = useState(biometrics.gender || 'male');
   const [age, setAge] = useState(Number(biometrics.age) || 20);
   const [heightCm, setHeightCm] = useState(Number(biometrics.heightCm) || 168);
@@ -44,7 +51,10 @@ export default function BiometricModal({ biometrics, onSave, onClose }) {
     return () => window.removeEventListener('keydown', handleKey);
   }, [onClose]);
 
+  const nameValid = name.length === 0 || USER_NAME_PATTERN.test(name);
+
   const handleSave = () => {
+    if (!nameValid) return;
     const finalAge = Math.max(14, Math.min(80, Math.round(Number(age) || 20)));
     const finalHeight = Math.max(
       120,
@@ -69,6 +79,7 @@ export default function BiometricModal({ biometrics, onSave, onClose }) {
       weightKg: finalWeight,
       activityLevel,
       strategyMode,
+      userName: name,
     });
   };
 
@@ -114,6 +125,41 @@ export default function BiometricModal({ biometrics, onSave, onClose }) {
 
         {/* Body */}
         <div className="space-y-4 p-4">
+          {/* Nama panggilan */}
+          <div className="space-y-1.5">
+            <label
+              htmlFor="profile-user-name"
+              className="text-xs font-semibold text-slate-300"
+            >
+              Nama Panggilan
+            </label>
+            <input
+              id="profile-user-name"
+              type="text"
+              value={name}
+              onChange={(event) => setName(sanitizeUserName(event.target.value))}
+              maxLength={6}
+              autoComplete="off"
+              autoCapitalize="words"
+              spellCheck={false}
+              placeholder="Raka"
+              aria-describedby="profile-user-name-help"
+              aria-invalid={!nameValid}
+              className="surface-inset min-h-11 w-full rounded-xl px-3 text-base font-semibold text-slate-100 placeholder:font-normal placeholder:text-slate-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+            />
+            <p
+              id="profile-user-name-help"
+              aria-live="polite"
+              className={`text-[11px] ${
+                nameValid ? 'text-slate-500' : 'text-amber-400'
+              }`}
+            >
+              {nameValid
+                ? 'Huruf saja, 3-6 karakter. Boleh dikosongkan.'
+                : 'Nama harus 3-6 huruf alfabet, tanpa spasi atau simbol.'}
+            </p>
+          </div>
+
           {/* Gender */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-300">
@@ -260,9 +306,10 @@ export default function BiometricModal({ biometrics, onSave, onClose }) {
           <motion.button
             type="button"
             onClick={handleSave}
-            whileTap={reduce ? undefined : { scale: 0.98 }}
+            disabled={!nameValid}
+            whileTap={reduce || !nameValid ? undefined : { scale: 0.98 }}
             transition={motionTokens.spring.smooth}
-            className="min-h-11 w-full rounded-xl bg-emerald-600 text-sm font-bold text-white transition hover:bg-emerald-500"
+            className="min-h-11 w-full rounded-xl bg-emerald-600 text-sm font-bold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Simpan &amp; Catat Perkembangan
           </motion.button>

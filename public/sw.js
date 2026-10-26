@@ -1,4 +1,4 @@
-const CACHE_NAME = 'healthengine-v4.2';
+const CACHE_NAME = 'healthengine-v4.2.1';
 const STATIC_ASSETS = [
   '/',
   '/icon-192.svg',

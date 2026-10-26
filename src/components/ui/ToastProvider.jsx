@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -15,6 +16,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   Info,
   X,
@@ -64,23 +66,59 @@ const POSITION_CLASSES = {
   'bottom-right': 'bottom-3 right-3',
 };
 
-function ToastCard({ item, index, onDismiss, onAction }) {
+function ToastCard({ item, index, onDismiss, onAction, onOpenChange }) {
   const reduce = useReducedMotion();
   const tone = TONE_STYLES[item.tone] ?? TONE_STYLES.neutral;
   const ToneIcon = tone.icon;
   const offset = index * STACK_PEEK;
   const actionable = typeof item.onAction === 'function';
+  const island = Boolean(item.island);
   const [expanded, setExpanded] = useState(false);
+  const cardRef = useRef(null);
+  const panelId = useId();
 
-  // Island choreography: land as a pill, then breathe open into a card.
+  // Island default: stay a slim capsule until the user asks for the details.
+  // Regular toasts keep the old choreography (land as a pill, then breathe open).
   useEffect(() => {
+    if (island) return undefined;
     if (reduce) return undefined;
     const timer = setTimeout(() => setExpanded(true), 140);
     return () => clearTimeout(timer);
-  }, [reduce]);
+  }, [island, reduce]);
 
-  const open = reduce || expanded;
+  const open = island ? expanded : reduce || expanded;
   const actionLabel = item.actionLabel || item.text;
+
+  // While the island is open it must not disappear under the user's finger,
+  // so the provider pauses the auto-dismiss timer and resumes it on collapse.
+  const setOpen = useCallback(
+    (next) => {
+      setExpanded(next);
+      onOpenChange?.(next, item.duration);
+    },
+    [item.duration, onOpenChange]
+  );
+
+  useEffect(() => {
+    if (!island || !open) return undefined;
+
+    const handlePointerDown = (event) => {
+      if (cardRef.current?.contains(event.target)) return;
+      setOpen(false);
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [island, open, setOpen]);
+
+  const title = island ? item.collapsedText || item.text : item.text;
 
   return (
     <motion.li
@@ -92,77 +130,177 @@ function ToastCard({ item, index, onDismiss, onAction }) {
       className="pointer-events-auto w-full [grid-area:1/1]"
     >
       <motion.div
-        initial={{ borderRadius: 9999 }}
-        animate={{ borderRadius: open ? 28 : 9999 }}
+        ref={cardRef}
+        data-toast-island={island ? 'true' : undefined}
+        initial={false}
+        animate={{ borderRadius: open ? 24 : 9999 }}
         transition={motionTokens.spring.morph}
-        className={`relative w-full overflow-hidden rounded-[28px] border bg-slate-900/95 shadow-2xl backdrop-blur-xl ${tone.borderClass} ${tone.glowClass}`}
+        className={`relative w-full overflow-hidden border bg-slate-900/95 shadow-2xl backdrop-blur-xl ${tone.borderClass} ${tone.glowClass}`}
       >
-        <div
-          role="status"
-          aria-live="polite"
-          className="flex items-start gap-3 p-3 pr-14 text-left"
-        >
-          <span
-            className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${tone.iconClass}`}
-          >
-            {item.icon ?? <ToneIcon size={17} strokeWidth={2.2} />}
-          </span>
+        {island ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setOpen(!open)}
+              aria-expanded={open}
+              aria-controls={panelId}
+              className="flex min-h-12 w-full touch-manipulation items-center gap-3 py-1.5 pl-3 pr-14 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-400"
+            >
+              <span
+                aria-hidden="true"
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${tone.iconClass}`}
+              >
+                {item.icon ?? <ToneIcon size={16} strokeWidth={2.2} />}
+              </span>
 
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold leading-snug text-slate-100">
-              {item.text}
-            </p>
+              <span
+                role="status"
+                aria-live="polite"
+                className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-100"
+              >
+                {title}
+              </span>
 
-            <motion.div
-              initial={false}
-              animate={{
-                height: open ? 'auto' : 0,
-                opacity: open ? 1 : 0,
-              }}
-              transition={
-                reduce
-                  ? { duration: 0 }
-                  : {
-                      height: {
-                        duration: motionTokens.duration.standard,
-                        ease: motionTokens.ease.standard,
-                      },
-                      opacity: {
+              <motion.span
+                aria-hidden="true"
+                animate={{ rotate: open ? 180 : 0 }}
+                transition={
+                  reduce
+                    ? { duration: 0 }
+                    : {
                         duration: motionTokens.duration.fast,
                         ease: motionTokens.ease.standard,
-                      },
-                    }
-              }
+                      }
+                }
+                className="flex shrink-0 items-center justify-center text-slate-500"
+              >
+                <ChevronDown size={16} strokeWidth={2.4} />
+              </motion.span>
+            </button>
+
+            <div
+              id={panelId}
+              aria-hidden={!open}
+              inert={!open ? true : undefined}
               className="overflow-hidden"
             >
-              {item.description ? (
-                <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-slate-400">
-                  {item.description}
+              <motion.div
+                initial={false}
+                animate={{
+                  height: open ? 'auto' : 0,
+                  opacity: open ? 1 : 0,
+                }}
+                transition={
+                  reduce
+                    ? { duration: 0 }
+                    : {
+                        height: {
+                          duration: motionTokens.duration.standard,
+                          ease: motionTokens.ease.standard,
+                        },
+                        opacity: {
+                          duration: motionTokens.duration.fast,
+                          ease: motionTokens.ease.standard,
+                        },
+                      }
+                }
+                className="overflow-hidden"
+              >
+                <div className="space-y-3 px-3 pb-3">
+                  {item.description ? (
+                    <p className="text-xs leading-relaxed text-slate-300">
+                      {item.description}
+                    </p>
+                  ) : null}
+
+                  {actionable ? (
+                    <button
+                      type="button"
+                      onClick={onAction}
+                      className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-2xl bg-blue-600 px-3 text-xs font-bold text-white transition-colors hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300"
+                    >
+                      {actionLabel}
+                      <ChevronRight
+                        aria-hidden="true"
+                        size={14}
+                        strokeWidth={2.6}
+                      />
+                    </button>
+                  ) : null}
+                </div>
+              </motion.div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div
+              role="status"
+              aria-live="polite"
+              className="flex items-start gap-3 p-3 pr-14 text-left"
+            >
+              <span
+                className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${tone.iconClass}`}
+              >
+                {item.icon ?? <ToneIcon size={17} strokeWidth={2.2} />}
+              </span>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold leading-snug text-slate-100">
+                  {item.text}
                 </p>
-              ) : null}
 
-              {actionable && item.actionLabel ? (
-                <span className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-blue-400">
-                  {item.actionLabel}
-                  <ChevronRight
-                    aria-hidden="true"
-                    size={14}
-                    strokeWidth={2.6}
-                  />
-                </span>
-              ) : null}
-            </motion.div>
-          </div>
-        </div>
+                <motion.div
+                  initial={false}
+                  animate={{
+                    height: open ? 'auto' : 0,
+                    opacity: open ? 1 : 0,
+                  }}
+                  transition={
+                    reduce
+                      ? { duration: 0 }
+                      : {
+                          height: {
+                            duration: motionTokens.duration.standard,
+                            ease: motionTokens.ease.standard,
+                          },
+                          opacity: {
+                            duration: motionTokens.duration.fast,
+                            ease: motionTokens.ease.standard,
+                          },
+                        }
+                  }
+                  className="overflow-hidden"
+                >
+                  {item.description ? (
+                    <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-slate-400">
+                      {item.description}
+                    </p>
+                  ) : null}
 
-        {actionable ? (
-          <button
-            type="button"
-            onClick={onAction}
-            className="absolute inset-0 rounded-[28px] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-400"
-            aria-label={actionLabel}
-          />
-        ) : null}
+                  {actionable && item.actionLabel ? (
+                    <span className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-blue-400">
+                      {item.actionLabel}
+                      <ChevronRight
+                        aria-hidden="true"
+                        size={14}
+                        strokeWidth={2.6}
+                      />
+                    </span>
+                  ) : null}
+                </motion.div>
+              </div>
+            </div>
+
+            {actionable ? (
+              <button
+                type="button"
+                onClick={onAction}
+                className="absolute inset-0 rounded-[28px] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-400"
+                aria-label={actionLabel}
+              />
+            ) : null}
+          </>
+        )}
 
         <button
           type="button"
@@ -170,7 +308,7 @@ function ToastCard({ item, index, onDismiss, onAction }) {
             event.stopPropagation();
             onDismiss();
           }}
-          className="absolute right-1.5 top-1.5 z-10 flex min-h-11 min-w-11 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-800 hover:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+          className="absolute right-1 top-0.5 z-10 flex min-h-11 min-w-11 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-800 hover:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
           aria-label="Tutup notifikasi"
         >
           <X size={16} strokeWidth={2.4} />
@@ -187,6 +325,9 @@ export function ToastProvider({
 }) {
   const [toasts, setToasts] = useState([]);
   const timersRef = useRef(new Map());
+  // Island yang sedang terbuka tidak boleh dijadwalkan tutup, termasuk saat
+  // toast dengan id sama dipicu ulang (mis. tombol agenda ditekan dua kali).
+  const openIslandsRef = useRef(new Set());
 
   // `true` only after hydration, so the portal never causes a mismatch.
   const mounted = useSyncExternalStore(
@@ -206,6 +347,7 @@ export function ToastProvider({
   const dismiss = useCallback(
     (id) => {
       clearTimer(id);
+      openIslandsRef.current.delete(id);
       setToasts((previous) => previous.filter((item) => item.id !== id));
     },
     [clearTimer]
@@ -214,6 +356,7 @@ export function ToastProvider({
   const scheduleDismiss = useCallback(
     (id, duration) => {
       clearTimer(id);
+      if (openIslandsRef.current.has(id)) return;
       if (!duration || duration <= 0) return;
       const timer = setTimeout(() => dismiss(id), duration);
       timersRef.current.set(id, timer);
@@ -230,9 +373,11 @@ export function ToastProvider({
       const item = {
         id,
         text: payload.text ?? 'Notifikasi',
+        collapsedText: payload.collapsedText ?? '',
         description: payload.description ?? '',
         icon: payload.icon ?? null,
         tone: payload.tone ?? 'neutral',
+        island: Boolean(payload.island),
         actionLabel: payload.actionLabel ?? '',
         onAction: payload.onAction ?? null,
         duration: payload.duration ?? DEFAULT_DURATION,
@@ -243,7 +388,9 @@ export function ToastProvider({
         ...previous.filter((entry) => entry.id !== id),
       ].slice(0, maxToasts));
 
-      scheduleDismiss(id, item.duration);
+      if (!openIslandsRef.current.has(id)) {
+        scheduleDismiss(id, item.duration);
+      }
       return id;
     },
     [maxToasts, scheduleDismiss]
@@ -260,6 +407,19 @@ export function ToastProvider({
   const contextValue = useMemo(
     () => ({ toast, dismiss, toasts }),
     [toast, dismiss, toasts]
+  );
+
+  const handleOpenChange = useCallback(
+    (id, open, duration) => {
+      if (open) {
+        openIslandsRef.current.add(id);
+        clearTimer(id);
+        return;
+      }
+      openIslandsRef.current.delete(id);
+      scheduleDismiss(id, duration);
+    },
+    [clearTimer, scheduleDismiss]
   );
 
   const portal =
@@ -281,6 +441,7 @@ export function ToastProvider({
                     item={item}
                     index={index}
                     onDismiss={() => dismiss(item.id)}
+                    onOpenChange={(open) => handleOpenChange(item.id, open, item.duration)}
                     onAction={() => {
                       if (typeof item.onAction === 'function') item.onAction();
                       dismiss(item.id);
