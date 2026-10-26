@@ -414,9 +414,12 @@ function HealthEngine() {
       setIsLoaded(true);
     }
 
-    // Registrasi Service Worker untuk PWA
+    // Registrasi Service Worker untuk PWA. Pada build statis, event 'load'
+    // sering sudah lewat sebelum hidrasi selesai; kalau tetap menunggu 'load',
+    // SW tidak pernah terdaftar dan cache versi baru tidak aktif. Jadi cek
+    // readyState dulu, baru pasang listener kalau halaman belum selesai.
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
+      const registerServiceWorker = () => {
         navigator.serviceWorker
           .register('/sw.js')
           .then((registration) => {
@@ -425,7 +428,13 @@ function HealthEngine() {
           .catch((error) => {
             console.warn('Pendaftaran Service Worker gagal:', error);
           });
-      });
+      };
+
+      if (document.readyState === 'complete') {
+        registerServiceWorker();
+      } else {
+        window.addEventListener('load', registerServiceWorker, { once: true });
+      }
     }
   }, []);
 
