@@ -8,23 +8,7 @@ import {
   BodySVG,
   MUSCLE_LABELS,
 } from '@/components/ui/MuscleMap';
-import {
-  PhaseVector,
-  getExercisePose,
-} from '@/components/ui/ExerciseVector';
-
-const PHASE_STYLES = [
-  {
-    label: 'Fase 1 · Eksentrik',
-    badge: 'border-sky-500/25 bg-sky-500/10 text-sky-300',
-    index: 1,
-  },
-  {
-    label: 'Fase 2 · Konsentrik',
-    badge: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300',
-    index: 2,
-  },
-];
+import { PhaseVector, getExercisePose } from '@/components/ui/ExerciseVector';
 
 function getPanelData(exercise) {
   const {
@@ -64,8 +48,8 @@ function getPanelData(exercise) {
 }
 
 /**
- * Langkah 1: vektor biomekanika dua fase. Dipisah dari peta otot agar kartu
- * latihan bisa menaruh daftar kesalahan postur tepat di bawah gerakan.
+ * Kanvas biomekanika tunggal. Pose dan koreografi dipilih dari nama gerakan,
+ * lalu dianimasikan hanya ketika kartu terlihat oleh pengguna.
  */
 export function ExerciseVectorPanel({ exercise, className = '' }) {
   const { pose } = getPanelData(exercise);
@@ -74,45 +58,14 @@ export function ExerciseVectorPanel({ exercise, className = '' }) {
     <section className={`space-y-3 ${className}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h5 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
-          Vektor Biomekanika 2 Fase
+          Kanvas Biomekanika Interaktif
         </h5>
         <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 font-mono text-xs font-semibold text-emerald-400">
           {pose.label}
         </span>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        {PHASE_STYLES.map((style) => (
-          <article
-            key={style.index}
-            className="surface-inset flex flex-col justify-between gap-3 rounded-xl p-4"
-          >
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-slate-200">
-                  {style.label}
-                </span>
-                <span
-                  className={`rounded border px-1.5 py-0.5 font-mono text-[11px] font-semibold ${style.badge}`}
-                >
-                  {style.index === 1 ? 'Turun' : 'Naik'}
-                </span>
-              </div>
-              <p className="text-xs leading-relaxed text-slate-400">
-                {style.index === 1 ? pose.c1 : pose.c2}
-              </p>
-            </div>
-
-            <div className="surface-chip rounded-lg p-2">
-              <PhaseVector
-                pose={pose.pose}
-                variant={pose.variant}
-                phase={style.index}
-              />
-            </div>
-          </article>
-        ))}
-      </div>
+      <PhaseVector pose={pose.pose} variant={pose.variant} />
     </section>
   );
 }
