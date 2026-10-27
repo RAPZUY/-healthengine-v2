@@ -39,7 +39,7 @@ import MartialArtsSection from '@/components/MartialArtsSection';
 import RunningTrackerSection from '@/components/RunningTrackerSection';
 import WeightProgressCard from '@/components/WeightProgressCard';
 import InstallPwaBanner from '@/components/InstallPwaBanner';
-import UpdateBannerV42 from '@/components/UpdateBannerV42';
+import UpdateBannerV50 from '@/components/UpdateBannerV50';
 import TodoCalendar from '@/components/ui/TodoCalendar';
 import ExpandableCard from '@/components/ui/ExpandableCard';
 import {
@@ -66,7 +66,7 @@ import {
 } from '@/components/ui/motion-primitives';
 
 // Versi rilis tampilan — samakan dengan CACHE_NAME di public/sw.js.
-const APP_VERSION = '4.2.1';
+const APP_VERSION = '5.0';
 
 // Permukaan kartu V4: token semantik, bukan warna gelap hard-coded.
 const CARD_SURFACE = 'surface-card rounded-2xl';
@@ -1122,7 +1122,7 @@ function HealthEngine() {
               )}
 
               {/* Banner pengumuman rilis V4.2 — paling atas Beranda */}
-              <UpdateBannerV42 />
+              <UpdateBannerV50 />
 
               <TodoCalendar
                 selectedDate={selectedDate}
